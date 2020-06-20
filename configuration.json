@@ -1,0 +1,13 @@
+{
+    "ID_MAP": {
+        "GUILD": "723550799254519808",
+        "CHANNELS": {
+            "CURRENT_PLAYERS_ON_SERVER": "723557810654150736",
+            "ALL_PLAYERS_ON_DISCORD": "723556322808692786",
+            "CHANNEL_RULES": "723560367292416081"
+        },
+        "MESSAGES": {
+            "RULE_REACTION_MESSAGE": "723578423456432189"
+        }
+    }
+}

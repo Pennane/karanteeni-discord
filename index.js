@@ -5,21 +5,10 @@ const Discord = require('discord.js')
 const chalk = require('chalk')
 const axios = require('axios').default;
 
+const configuration = require('./configuration.json')
 const authorize = require('./authorize.json')
 
 const client = new Discord.Client()
-
-const guildId = "723550799254519808"
-
-const channelIds = {
-    onServer: '723557810654150736',
-    onDiscord: '723556322808692786',
-    rules: '723560367292416081'
-}
-
-const messageIds = {
-    ruleRoleMessage: "723578423456432189"
-}
 
 let cachedServerStatus = null;
 let cachedMemberCount = null;
@@ -38,9 +27,9 @@ function fetchServerStatus() {
 
 
 async function updateServerStatus() {
-    let guild = client.guilds.cache.get(guildId)
-    let onServer = guild.channels.cache.get(channelIds.onServer);
-    let onDiscord = guild.channels.cache.get(channelIds.onDiscord);
+    let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
+    let onServer = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_SERVER);
+    let onDiscord = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD);
 
     let serverStatus = await fetchServerStatus();
     if (!cachedServerStatus || serverStatus.players.online !== cachedServerStatus.players.online) {
@@ -55,9 +44,9 @@ async function updateServerStatus() {
 }
 
 async function updateGivenRoles() {
-    let guild = client.guilds.cache.get(guildId)
-    let channel = guild.channels.cache.get(channelIds.rules)
-    let message = channel.messages.cache.get(messageIds.ruleRoleMessage)
+    let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
+    let channel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CHANNEL_RULES)
+    let message = channel.messages.cache.get(configuration.ID_MAP.MESSAGES.RULE_REACTION_MESSAGE)
     let playerRoles = await message.reactions.cache.get("✅").users.fetch()
     let notifyRoles = await message.reactions.cache.get("❗").users.fetch()
 
@@ -81,7 +70,7 @@ async function updateGivenRoles() {
 }
 
 function toggleRole(user, roleName, type) {
-    let guild = client.guilds.cache.get(guildId)
+    let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
     if (!guild) throw new Error("no guild bro")
     let role = guild.roles.cache.find(role => role.name === roleName)
 
@@ -95,7 +84,7 @@ function toggleRole(user, roleName, type) {
 }
 
 function parseReaction(reaction) {
-    if (reaction.reaction.message.id === messageIds.ruleRoleMessage) {
+    if (reaction.reaction.message.id === configuration.ID_MAP.MESSAGES.RULE_REACTION_MESSAGE) {
         if (reaction.reaction._emoji.name === "✅" && reaction.type === "ADD") {
             toggleRole(reaction.user, "Pelaaja", reaction.type)
         }
@@ -107,8 +96,8 @@ function parseReaction(reaction) {
 
 function cacheRequiredMessages() {
     return new Promise((resolve, reject) => {
-        let rulesTextChannel = client.channels.cache.get(channelIds.rules)
-        rulesTextChannel.messages.fetch(messageIds.ruleRoleMessage)
+        let rulesTextChannel = client.channels.cache.get(configuration.ID_MAP.CHANNELS.CHANNEL_RULES)
+        rulesTextChannel.messages.fetch(configuration.ID_MAP.MESSAGES.ruleRoleMessage)
             .then(() => {
                 console.log('cached required messages')
                 resolve()
