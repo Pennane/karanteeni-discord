@@ -178,6 +178,30 @@ client.on('message', async (message) => {
     if (message.content.startsWith('/komppaniassaherätys')) {
         message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
     }
+    if (message.content.startsWith('/sendmessage')) {
+        let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
+        if (!guild) return;
+        let member = guild.members.cache.get(message.author.id);
+        if (!member) return;
+        if (!member.hasPermission("ADMINISTRATOR")) return;
+
+        let args = message.content.trim().split(' ')
+
+        if (!args[1] || !args[2]) return;
+        let targetChannelId = args[1]
+
+        let targetChannel = guild.channels.cache.get(targetChannelId)
+
+        if (!targetChannel) return;
+
+        if (args[3]) {
+            for (let i = 3; i < args.length; i++) {
+                args[2] = args[2] + ' ' + args[i];
+            }
+        }
+
+        targetChannel.send(args[2])
+    }
 })
 
 client.on("messageReactionAdd", (reaction, user) => {
