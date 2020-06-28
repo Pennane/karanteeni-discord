@@ -12,15 +12,18 @@ const authorize = require('./authorize.json')
 
 const client = new Discord.Client()
 
+const RULES_READ_EMOJI = "✅";
+const NOTIFY_ROLE_EMOJI = "❗"
+
 let cachedServerStatus = null;
 let cachedMemberCount = null;
 
 function parseReaction(reaction) {
     if (reaction.reaction.message.id === configuration.ID_MAP.MESSAGES.RULE_REACTION_MESSAGE) {
-        if (reaction.reaction._emoji.name === "✅" && reaction.type === "ADD") {
+        if (reaction.reaction._emoji.name === RULES_READ_EMOJI && reaction.type === "ADD") {
             toggleRole(reaction.user, "Pelaaja", reaction.type)
         }
-        if (reaction.reaction._emoji.name === "❗") {
+        if (reaction.reaction._emoji.name === NOTIFY_ROLE_EMOJI) {
             toggleRole(reaction.user, "Ilmoitukset", reaction.type)
         }
     }
@@ -49,7 +52,6 @@ function cacheRequiredMessages() {
         let rulesTextChannel = client.channels.cache.get(configuration.ID_MAP.CHANNELS.CHANNEL_RULES)
         rulesTextChannel.messages.fetch(configuration.ID_MAP.MESSAGES.ruleRoleMessage)
             .then(() => {
-                console.log('cached required messages')
                 resolve()
             })
             .catch(error => {
@@ -96,14 +98,13 @@ function updateServerStatus() {
 function updateAutomatedRoles() {
     return new Promise(async (resolve, reject) => {
         let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-        if (!guild) throw new Error("Client has an invalid main guild id")
+        if (!guild) throw new Error("Client has an invalid MAIN_GUILD_ID")
 
         let channel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CHANNEL_RULES)
-        if (!channel) throw new Error("Main guild does not have given channel as a part of it")
+        if (!channel) throw new Error("MAIN_GUILD does not have given channel as a part of it")
 
         let message = channel.messages.cache.get(configuration.ID_MAP.MESSAGES.RULE_REACTION_MESSAGE)
-        if (!message) throw new Error("Did not find the role reaction message")
-
+        if (!message) throw new Error("Did not find the ROLE_REACTION_MESSAGE")
 
         let playerRoles = await message.reactions.cache.get("✅").users.fetch()
         let notifyRoles = await message.reactions.cache.get("❗").users.fetch()
@@ -158,6 +159,13 @@ client.on('ready', async () => {
     console.log(chalk.blue("//// Minecraftissa tällä hetkellä", chalk.yellow(cachedServerStatus.players.online), chalk.blue('pelaajaa')))
 })
 
+client.on('message', async (message) => {
+    if (message.author.bot) return;
+
+    if (message.content.startsWith('/komppaniassaherätys')) {
+        message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
+    }
+})
 
 client.on("messageReactionAdd", (reaction, user) => {
     parseReaction({
@@ -174,6 +182,17 @@ client.on("messageReactionRemove", (reaction, user) => {
         type: "REMOVE"
     })
 })
+
+client.on('reconnecting', () => console.log("BOT RECONNECTING"))
+
+client.on('resume', () => console.log("BOT RESUMED SUCCESFULLY"))
+
+client.on('error', (err) => console.log("ERROR ON CLIENT:", err))
+
+client.on('warn', (warn) => console.warn(warn))
+
+process.on('uncaughtException', (err) => console.log("EXCEPTION ON PROCESS:", err))
+
 
 
 client.login(authorize.token)
