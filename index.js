@@ -76,16 +76,29 @@ function fetchServerStatus() {
 function updateServerStatus() {
     return new Promise(async (resolve, reject) => {
         let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-        let onServer = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_SERVER);
-        let onDiscord = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD);
+        let playersOnServerChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_SERVER);
+        let usersOnDiscordChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD);
 
         let serverStatus = await fetchServerStatus();
+
         if (!cachedServerStatus || serverStatus.players.online !== cachedServerStatus.players.online) {
-            onServer.setName("Pelaajia servulla: " + serverStatus.players.online);
+            if (!playersOnServerChannel.editable) {
+                console.log("Unable to edit playersOnServerChannel")
+            } else {
+                playersOnServerChannel.edit({ name: "Pelaajia servulla: " + serverStatus.players.online })
+                    .catch(err => console.log(err))
+            }
+
         }
 
         if (!cachedMemberCount || guild.memberCount !== cachedMemberCount) {
-            onDiscord.setName("Pelaajia discordissa: " + guild.memberCount);
+            if (!usersOnDiscordChannel.editable) {
+                console.log("Unable to edit usersOnDiscordChannel")
+            } else {
+                usersOnDiscordChannel.edit({ name: "Pelaajia discordissa: " + guild.memberCount })
+                    .catch(err => console.log(err))
+            }
+
         }
 
         cachedServerStatus = serverStatus;
