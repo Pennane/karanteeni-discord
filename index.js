@@ -18,6 +18,8 @@ const NOTIFY_ROLE_EMOJI = "❗"
 let cachedServerStatus = null;
 let cachedMemberCount = null;
 
+let hirvitysFiltteri = false;
+
 function parseReaction(reaction) {
     if (reaction.reaction.message.id === configuration.ID_MAP.MESSAGES.RULE_REACTION_MESSAGE) {
         if (reaction.reaction._emoji.name === RULES_READ_EMOJI && reaction.type === "ADD") {
@@ -170,6 +172,7 @@ client.on('ready', async () => {
     console.log(chalk.blue("//// Käynnistyminen kesti"), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
     console.log(chalk.blue("//// Discord serverillä yhteensä", chalk.yellow(cachedMemberCount), chalk.blue('pelaajaa')))
     console.log(chalk.blue("//// Minecraftissa tällä hetkellä", chalk.yellow(cachedServerStatus.players.online), chalk.blue('pelaajaa')))
+    console.log(chalk.blue("//// Hirvitysfiltteri", hirvitysFiltteri ? chalk.yellow("päällä") : chalk.red("pois päältä")))
 })
 
 client.on('message', async (message) => {
@@ -178,6 +181,33 @@ client.on('message', async (message) => {
     if (message.content.startsWith('/komppaniassaherätys')) {
         message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
     }
+    if (hirvitysFiltteri && message.deletable()) {
+        if (message.content.toLowerCase() === "ok" || message.content.toLowerCase() === "eiku") {
+            message.delete({ reason: "stop, hirvitysfiltteri ei hyväksy" })
+        }
+    }
+
+
+    if (message.content.startsWith('/hirvitysfiltteri')) {
+        if (message.guild === null) return;
+
+        if (!message.member.hasPermission("ADMINISTRATOR")) return;
+
+        let args = message.content.trim().split(' ')
+
+        if (args[1] == 'true' || args[1] == 'päälle' || args[1] == 'on') {
+            hirvitysFiltteri = true
+        } else if (args[1] == 'false' || args[1] == 'pois' || args[1] == 'off') {
+            hirvitysFiltteri = false
+        }
+
+        if (hirvitysFiltteri) {
+            message.channel.send('Hirvitysfiltteri o päällä bro')
+        } else {
+            message.channel.send('Hirvitysfiltteri ei oo päällä bro')
+        }
+    }
+
     if (message.content.startsWith('/sendmessage')) {
         let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
         if (!guild) return;
