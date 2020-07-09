@@ -181,7 +181,7 @@ client.on('message', async (message) => {
     if (message.content.startsWith('/komppaniassaherätys')) {
         message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
     }
-    if (hirvitysFiltteri && message.deletable()) {
+    if (hirvitysFiltteri && message.deletable) {
         if (message.content.toLowerCase() === "ok" || message.content.toLowerCase() === "eiku") {
             message.delete({ reason: "stop, hirvitysfiltteri ei hyväksy" })
         }
