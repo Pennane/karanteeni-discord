@@ -14,7 +14,7 @@ const client = new Discord.Client()
 
 const RULES_READ_EMOJI = "✅";
 const NOTIFY_ROLE_EMOJI = "❗"
-const PREFIX = configuration.PREFIX
+const PREFIX = configuration.DISCORD.PREFIX
 const FORBIDDEN_WORDS = configuration.FORBIDDEN_WORDS
 
 let cachedServerStatus = null;
@@ -153,9 +153,29 @@ function parseCommand(message) {
 
     if (!hasPrefix) return;
 
-    let args = message.content.trim().substr(prefix.length).split(' ')
+    let args = message.content.trim().substr(PREFIX.length).split(' ')
 
     switch (args[0]) {
+        case "puhista": {
+            if (!message.member.hasPermission("ADMINISTRATOR")) return;
+
+            let embed = new Discord.MessageEmbed().setColor(0xF4E542);
+
+            if (args[1] >= 2 && args[1] <= 99) {
+                embed.setDescription(`Poistin ${args[1]} viestiä.`)
+                let amount = parseInt(args[1]) + 1;
+                message.channel.bulkDelete(amount)
+                    .then(() => {
+                        message.channel.send(embed)
+                            .then(message => message.delete({ timeout: 4000 }))
+                            .catch(err => console.info(err))
+                    })
+                    .catch(error => console.error(error));
+            } else {
+                let embed = syntaxEmbed({ configuration, args })
+                message.channel.send(embed).catch(err => console.info(err))
+            }
+        }
         case "hirvitysfiltteri": {
             if (message.guild === null) return;
 
@@ -246,7 +266,7 @@ client.on('message', async (message) => {
         })
     }
 
-    if (message.content.startsWith(PREFIX)) {
+    if (message.content.toLowerCase().startsWith(PREFIX)) {
         parseCommand(message)
     }
 })
