@@ -12,5 +12,10 @@
         "MESSAGES": {
             "RULE_REACTION_MESSAGE": "726879559986839685"
         }
-    }
+    },
+    "FORBIDDEN_WORDS": [
+        "ok",
+        "eiku",
+        "hmm"
+    ]
 }

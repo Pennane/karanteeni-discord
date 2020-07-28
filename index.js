@@ -14,6 +14,8 @@ const client = new Discord.Client()
 
 const RULES_READ_EMOJI = "✅";
 const NOTIFY_ROLE_EMOJI = "❗"
+const PREFIX = configuration.PREFIX
+const FORBIDDEN_WORDS = configuration.FORBIDDEN_WORDS
 
 let cachedServerStatus = null;
 let cachedMemberCount = null;
@@ -146,6 +148,65 @@ function updateAutomatedRoles() {
     })
 }
 
+function parseCommand(message) {
+    let hasPrefix = message.content.startsWith(PREFIX)
+
+    if (!hasPrefix) return;
+
+    let args = message.content.trim().substr(prefix.length).split(' ')
+
+    switch (args[0]) {
+        case "hirvitysfiltteri": {
+            if (message.guild === null) return;
+
+            if (!message.member.hasPermission("ADMINISTRATOR")) return;
+
+            let args = message.content.trim().split(' ')
+
+            if (args[1] == 'true' || args[1] == 'päälle' || args[1] == 'on') {
+                hirvitysFiltteri = true
+            } else if (args[1] == 'false' || args[1] == 'pois' || args[1] == 'off') {
+                hirvitysFiltteri = false
+            }
+
+            if (hirvitysFiltteri) {
+                message.channel.send('Hirvitysfiltteri o päällä bro. Sanat "' + FORBIDDEN_WORDS.join(', ') + '" katoo ilman sisältöö')
+            } else {
+                message.channel.send('Hirvitysfiltteri ei oo päällä bro')
+            }
+        }
+        case "sendmessage": {
+            let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
+            if (!guild) return;
+
+            let member = guild.members.cache.get(message.author.id);
+
+            if (!member) return;
+
+            if (!member.hasPermission("ADMINISTRATOR")) return;
+
+            if (!args[1] || !args[2]) return;
+
+            let targetChannelId = args[1]
+
+            let targetChannel = guild.channels.cache.get(targetChannelId)
+
+            if (!targetChannel) return;
+
+            if (args[3]) {
+                for (let i = 3; i < args.length; i++) {
+                    args[2] = args[2] + ' ' + args[i];
+                }
+            }
+
+            targetChannel.send(args[2])
+        }
+        case "komppaniassaherätys": {
+            message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
+        }
+
+    }
+}
 
 
 client.on('ready', async () => {
@@ -156,7 +217,6 @@ client.on('ready', async () => {
     // Update server status and add missing roles
     await updateServerStatus()
     await updateAutomatedRoles()
-
 
     // Update the info channel names in discord every 10 minutes
     let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
@@ -178,59 +238,16 @@ client.on('ready', async () => {
 client.on('message', async (message) => {
     if (message.author.bot) return;
 
-    if (message.content.startsWith('/komppaniassaherätys')) {
-        message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
-    }
     if (hirvitysFiltteri && message.deletable) {
-        if (message.content.toLowerCase() === "ok" || message.content.toLowerCase() === "eiku") {
-            message.delete({ reason: "stop, hirvitysfiltteri ei hyväksy" })
-        }
-    }
-
-
-    if (message.content.startsWith('/hirvitysfiltteri')) {
-        if (message.guild === null) return;
-
-        if (!message.member.hasPermission("ADMINISTRATOR")) return;
-
-        let args = message.content.trim().split(' ')
-
-        if (args[1] == 'true' || args[1] == 'päälle' || args[1] == 'on') {
-            hirvitysFiltteri = true
-        } else if (args[1] == 'false' || args[1] == 'pois' || args[1] == 'off') {
-            hirvitysFiltteri = false
-        }
-
-        if (hirvitysFiltteri) {
-            message.channel.send('Hirvitysfiltteri o päällä bro')
-        } else {
-            message.channel.send('Hirvitysfiltteri ei oo päällä bro')
-        }
-    }
-
-    if (message.content.startsWith('/sendmessage')) {
-        let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-        if (!guild) return;
-        let member = guild.members.cache.get(message.author.id);
-        if (!member) return;
-        if (!member.hasPermission("ADMINISTRATOR")) return;
-
-        let args = message.content.trim().split(' ')
-
-        if (!args[1] || !args[2]) return;
-        let targetChannelId = args[1]
-
-        let targetChannel = guild.channels.cache.get(targetChannelId)
-
-        if (!targetChannel) return;
-
-        if (args[3]) {
-            for (let i = 3; i < args.length; i++) {
-                args[2] = args[2] + ' ' + args[i];
+        FORBIDDEN_WORDS.forEach(word => {
+            if (message.content.toLowerCase() === "ok" || message.content.toLowerCase() === "eiku") {
+                return message.delete({ reason: "stop, hirvitysfiltteri ei hyväksy" })
             }
-        }
+        })
+    }
 
-        targetChannel.send(args[2])
+    if (message.content.startsWith(PREFIX)) {
+        parseCommand(message)
     }
 })
 
