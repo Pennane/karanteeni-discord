@@ -175,6 +175,7 @@ function parseCommand(message) {
                 let embed = syntaxEmbed({ configuration, args })
                 message.channel.send(embed).catch(err => console.info(err))
             }
+            break;
         }
         case "hirvitysfiltteri": {
             if (message.guild === null) return;
@@ -194,6 +195,7 @@ function parseCommand(message) {
             } else {
                 message.channel.send('Hirvitysfiltteri ei oo päällä bro')
             }
+            break;
         }
         case "sendmessage": {
             let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
@@ -220,9 +222,11 @@ function parseCommand(message) {
             }
 
             targetChannel.send(args[2])
+            break;
         }
         case "komppaniassaherätys": {
             message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
+            break;
         }
 
     }
