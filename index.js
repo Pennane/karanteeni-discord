@@ -7,12 +7,15 @@ const Discord = require('discord.js')
 const chalk = require('chalk')
 const axios = require('axios').default;
 
+
+
 const configuration = require('./configuration.json')
 const authorize = require('./authorize.json')
 
 const client = new Discord.Client()
 
 const reactionListeners = require('./reaction_handling/listeners.js')
+const twitch = require('./twitch_integration/twitch.js')
 
 let cachedMinecraftServerStatus = null;
 let cachedMemberCount = null;
@@ -169,12 +172,13 @@ function updateAutomatedRoles() {
 
 client.on('ready', async () => {
 
+    return;
     // Cache messages required for updating roles
     await cacheRequiredMessages()
 
     // Update server status and add missing roles
     await updateMinecraftServerStatus()
-    
+
     await updateAutomatedRoles()
 
     // Update the info channel names in discord every 10 minutes
@@ -187,6 +191,8 @@ client.on('ready', async () => {
         updateAutomatedRoles()
     });
 
+
+    
     console.log(chalk.blue("//// Botti virallisesti hereillä."))
     console.log(chalk.blue("//// Käynnistyminen kesti"), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
     console.log(chalk.blue("//// Discord serverillä yhteensä", chalk.yellow(cachedMemberCount), chalk.blue('pelaajaa')))
@@ -195,6 +201,7 @@ client.on('ready', async () => {
     } else {
         console.log(chalk.red("//// Minecraftissa palvelin tuntuisi olevan pois päältä."))
     }
+    
 })
 
 
@@ -226,4 +233,4 @@ process.on('uncaughtException', (err) => console.log("UNCAUGHT EXCEPTION ON PROC
 
 
 
-client.login(authorize.token)
+client.login(authorize.discord.token)
