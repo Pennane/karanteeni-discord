@@ -2,12 +2,10 @@ process.chdir(__dirname)
 
 let startingDate = Date.now()
 
-const schedule = require('node-schedule')
 const Discord = require('discord.js')
+const schedule = require('node-schedule')
 const chalk = require('chalk')
 const axios = require('axios').default;
-
-
 
 const configuration = require('./configuration.json')
 const authorize = require('./authorize.json')
@@ -174,18 +172,15 @@ function updateAutomatedRoles() {
 
 TwitchEmitter.on('streamChange', (change) => {
     if (!change.data || !change.data.user) return;
+    if (change.type !== "online") return;
+
+    let embed = new Discord.MessageEmbed()
 
     let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD);
     let channel = guild.channels.cache.get(testitwitchMessageChannel)
     let role = guild.roles.cache.find(role => role.name === "Twitch")
 
-    let embed = new Discord.MessageEmbed()
-
-
-    if (change.type !== "online") return;
-
     let thumbnailUrl = change.data.thumbnail;
-
     let streamUrl = `https://www.twitch.tv/${change.data.user}`;
 
     if (thumbnailUrl) {
@@ -194,24 +189,28 @@ TwitchEmitter.on('streamChange', (change) => {
     }
 
     embed
-        .setAuthor('Karanteenin Twitch Ilmoittaja',)
+        .setAuthor('Karanteenin Twitch Ilmoittaja'/*, "https://i.imgur.com/WWmTu7c.png"*/)
         .setColor('#fdf500')
-        .setTitle(change.data.user + " on livenä! - Twitch")
+        .setTitle(change.data.user + " on linjoilla! - Twitch")
         .setImage(thumbnailUrl)
         .setDescription(change.data.user+' - '+change.data.title)
         .setURL(streamUrl)
         .setTimestamp()
+        .setThumbnail( change.data.profilePicture)
         .setFooter('Twitch ilmoitus provided by karanteeni', 'https://i.imgur.com/WWmTu7c.png')
         .addField(`\u200b`, '[Tule seuraamaan Karanteenin ylläpidon streamia!]('+streamUrl+')')
-        .setThumbnail( change.data.profilePicture)
+        
+        let message = new Discord.APIMessage(channel, {
+            content: `[ <@&${role.id}> ]`,
+            embed: embed
+        });
 
-        channel.send(embed)
-        channel.send(`[ <@&${role.id}> ]`)
+        channel.send(message)
         
 })
 
 client.on('ready', async () => {
-    return
+    
     // Cache messages required for updating roles
     await cacheRequiredMessages()
 
@@ -240,10 +239,9 @@ client.on('ready', async () => {
     } else {
         console.log(chalk.red("//// Minecraftissa palvelin tuntuisi olevan pois päältä."))
     }
-
 })
 
-
+// Sends added reactions to be handled
 client.on("messageReactionAdd", (reaction, user) => {
     parseReaction({
         reaction: reaction,
@@ -252,6 +250,7 @@ client.on("messageReactionAdd", (reaction, user) => {
     })
 })
 
+// Sends removed reactions to be handled
 client.on("messageReactionRemove", (reaction, user) => {
     parseReaction({
         reaction: reaction,
@@ -259,6 +258,8 @@ client.on("messageReactionRemove", (reaction, user) => {
         type: "REMOVE"
     })
 })
+
+
 
 client.on('reconnecting', () => console.log("BOT RECONNECTING"))
 
