@@ -45,7 +45,7 @@ function updateMinecraftServerStatus() {
         if (minecraftServerStatus && minecraftServerStatus.online === true && (!cachedMinecraftServerStatus || minecraftServerStatus.players.online !== cachedMinecraftServerStatus.players.online)) {
             playersOnMinecraftServerChannel.edit({ name: "Pelaajia servulla: " + minecraftServerStatus.players.online })
                 .catch(err => console.log(err))
-        } else if (minecraftServerStatus && minecraftServerStatus.online === false && cachedMinecraftServerStatus.online !== false) {
+        } else if (minecraftServerStatus && minecraftServerStatus.online === false && (!cachedMinecraftServerStatus || cachedMinecraftServerStatus.online !== false)) {
             playersOnMinecraftServerChannel.edit({ name: "Palvelin poissa päältä" })
                 .catch(err => console.log(err))
         } else if (!minecraftServerStatus && cachedMinecraftServerStatus) {
@@ -173,7 +173,8 @@ client.on('ready', async () => {
     await cacheRequiredMessages()
 
     // Update server status and add missing roles
-    // await updateMinecraftServerStatus()
+    await updateMinecraftServerStatus()
+    
     await updateAutomatedRoles()
 
     // Update the info channel names in discord every 10 minutes
