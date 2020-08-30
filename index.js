@@ -12,25 +12,76 @@ const authorize = require('./authorize.json')
 
 const client = new Discord.Client()
 
-const RULES_READ_EMOJI = "✅";
-const NOTIFY_ROLE_EMOJI = "❗"
-const PREFIX = configuration.DISCORD.PREFIX
-const FORBIDDEN_WORDS = configuration.FORBIDDEN_WORDS
+const reactionListeners = require('./reaction_handling/listeners.js')
 
-let cachedServerStatus = null;
+let cachedMinecraftServerStatus = null;
 let cachedMemberCount = null;
 
-let hirvitysFiltteri = false;
+function fetchMinecraftServerStatus() {
+    return new Promise((resolve, reject) => {
+        axios.get('https://api.mcsrvstat.us/2/mc.karanteeni.net')
+            .then(function (response) {
+                resolve(response.data)
+            })
+            .catch(function (error) {
+                reject(error)
+            });
+    });
+}
 
-function parseReaction(reaction) {
-    if (reaction.reaction.message.id === configuration.ID_MAP.MESSAGES.RULE_REACTION_MESSAGE) {
-        if (reaction.reaction._emoji.name === RULES_READ_EMOJI && reaction.type === "ADD") {
-            toggleRole(reaction.user, "Pelaaja", reaction.type)
+function updateMinecraftServerStatus() {
+    return new Promise(async (resolve, reject) => {
+        let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
+
+        let playersOnMinecraftServerChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_MINECRAFT_SERVER);
+        let usersOnDiscordChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD);
+
+        let minecraftServerStatus = await fetchMinecraftServerStatus();
+
+        if (!playersOnMinecraftServerChannel.editable || !usersOnDiscordChannel.editable) {
+            return console.log("Unable to edit required channels. Aborting.")
         }
-        if (reaction.reaction._emoji.name === NOTIFY_ROLE_EMOJI) {
-            toggleRole(reaction.user, "Ilmoitukset", reaction.type)
+
+        if (minecraftServerStatus && minecraftServerStatus.online === true && (!cachedMinecraftServerStatus || minecraftServerStatus.players.online !== cachedMinecraftServerStatus.players.online)) {
+            playersOnMinecraftServerChannel.edit({ name: "Pelaajia servulla: " + minecraftServerStatus.players.online })
+                .catch(err => console.log(err))
+        } else if (minecraftServerStatus && minecraftServerStatus.online === false && cachedMinecraftServerStatus.online !== false) {
+            playersOnMinecraftServerChannel.edit({ name: "Palvelin poissa päältä" })
+                .catch(err => console.log(err))
+        } else if (!minecraftServerStatus && cachedMinecraftServerStatus) {
+            playersOnMinecraftServerChannel.edit({ name: "Pelaajia servulla: ?" })
+                .catch(err => console.log(err))
         }
-    }
+
+        if (!cachedMemberCount || guild.memberCount !== cachedMemberCount) {
+            usersOnDiscordChannel.edit({ name: "Pelaajia discordissa: " + guild.memberCount })
+                .catch(err => console.log(err))
+        }
+
+        cachedMinecraftServerStatus = minecraftServerStatus;
+        cachedMemberCount = guild.memberCount;
+
+        resolve(true)
+    })
+}
+
+function cacheRequiredMessages() {
+    return new Promise((resolve, reject) => {
+        let promises = []
+
+        reactionListeners.forEach(listener => {
+            let channel = client.channels.cache.get(listener.location.channel)
+            let promise = channel.messages.fetch(listener.location.message)
+                .catch(error => console.log('failed to cache required messages', error));
+            promises.push(promise)
+        })
+
+        Promise.all(promises)
+            .then(values => {
+                resolve()
+            })
+            .catch(error => console.log('failed to cache required messages', error));
+    })
 }
 
 function toggleRole(user, roleName, type) {
@@ -51,65 +102,22 @@ function toggleRole(user, roleName, type) {
 
 }
 
-function cacheRequiredMessages() {
-    return new Promise((resolve, reject) => {
-        let rulesTextChannel = client.channels.cache.get(configuration.ID_MAP.CHANNELS.CHANNEL_RULES)
-        rulesTextChannel.messages.fetch(configuration.ID_MAP.MESSAGES.ruleRoleMessage)
-            .then(() => {
-                resolve()
-            })
-            .catch(error => {
-                console.log('failed to cache required messages')
-            })
+function parseReaction(reaction) {
+    let reactionListener = reactionListeners.find(listener => {
+        let correctChannel = listener.location.message === reaction.reaction.message.id;
+        let correctEmoji = reaction.reaction._emoji.id === null ? listener.emoji.name === reaction.reaction._emoji.name : listener.emoji.id === reaction.reaction._emoji.id
+
+        return correctChannel && correctEmoji;
     })
 
-}
+    if (!reactionListener) return;
 
-function fetchServerStatus() {
-    return new Promise((resolve, reject) => {
-        axios.get('https://api.mcsrvstat.us/2/mc.karanteeni.net')
-            .then(function (response) {
-                resolve(response.data)
-            })
-            .catch(function (error) {
-                reject(error)
-            });
-    });
-}
+    if (reaction.type === "ADD") {
+        toggleRole(reaction.user, reactionListener.role.name, "ADD")
+    } else if (reactionListener.role.removable && reaction.type === "REMOVE") {
+        toggleRole(reaction.user, reactionListener.role.name, "REMOVE")
+    }
 
-function updateServerStatus() {
-    return new Promise(async (resolve, reject) => {
-        let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-        let playersOnServerChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_SERVER);
-        let usersOnDiscordChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD);
-
-        let serverStatus = await fetchServerStatus();
-
-        if (!cachedServerStatus || serverStatus.players.online !== cachedServerStatus.players.online) {
-            if (!playersOnServerChannel.editable) {
-                console.log("Unable to edit playersOnServerChannel")
-            } else {
-                playersOnServerChannel.edit({ name: "Pelaajia servulla: " + serverStatus.players.online })
-                    .catch(err => console.log(err))
-            }
-
-        }
-
-        if (!cachedMemberCount || guild.memberCount !== cachedMemberCount) {
-            if (!usersOnDiscordChannel.editable) {
-                console.log("Unable to edit usersOnDiscordChannel")
-            } else {
-                usersOnDiscordChannel.edit({ name: "Pelaajia discordissa: " + guild.memberCount })
-                    .catch(err => console.log(err))
-            }
-
-        }
-
-        cachedServerStatus = serverStatus;
-        cachedMemberCount = guild.memberCount;
-
-        resolve(true)
-    })
 }
 
 function updateAutomatedRoles() {
@@ -117,121 +125,47 @@ function updateAutomatedRoles() {
         let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
         if (!guild) throw new Error("Client has an invalid MAIN_GUILD_ID")
 
-        let channel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CHANNEL_RULES)
-        if (!channel) throw new Error("MAIN_GUILD does not have given channel as a part of it")
+        reactionListeners.forEach(async listener => {
+            let channel = guild.channels.cache.get(listener.location.channel)
+            if (!channel) return console.log(chalk.red(listener.name + " uses a channel that does not exist in MAIN GUILD"))
 
-        let message = channel.messages.cache.get(configuration.ID_MAP.MESSAGES.RULE_REACTION_MESSAGE)
-        if (!message) throw new Error("Did not find the ROLE_REACTION_MESSAGE")
+            let message = channel.messages.cache.get(listener.location.message)
+            if (!message) return console.log(chalk.red(listener.name + " uses a message id that can not be found"))
 
-        let playerRoles = await message.reactions.cache.get("✅").users.fetch()
-        let notifyRoles = await message.reactions.cache.get("❗").users.fetch()
+            let reactionCache = message.reactions.cache.get(listener.emoji.id || listener.emoji.name)
 
-        playerRoles.each(player => {
-            let member = guild.members.cache.get(player.id)
-            if (!member) return;
-            let roleName = "Pelaaja"
-            let role = guild.roles.cache.find(role => role.name === roleName)
-            if (member.roles.cache.find(role => role.name === roleName)) return;
-            member.roles.add(role);
-        })
+            if (!reactionCache) {
+                message.react(listener.emoji.id || listener.emoji.name)
+                return;
+            }
 
-        notifyRoles.each(player => {
-            let member = guild.members.cache.get(player.id)
-            if (!member) return;
-            let roleName = "Ilmoitukset"
-            let role = guild.roles.cache.find(role => role.name === roleName)
-            if (member.roles.cache.find(role => role.name === roleName)) return;
-            member.roles.add(role);
+            if (!reactionCache.me) {
+                message.react(listener.emoji.id || listener.emoji.name)
+            }
+
+            let reactedUsers = await reactionCache.users.fetch()
+
+            if (!reactedUsers) return;
+
+            reactedUsers.forEach(user => {
+                let member = guild.members.cache.get(user.id)
+                if (!member) return;
+
+                let roleName = listener.role.name;
+
+                let role = guild.roles.cache.find(role => role.name === roleName)
+
+                if (!role) return console.log(chalk.red("Missing role '" + roleName + "'"))
+
+                if (member.roles.cache.find(role => role.name === roleName)) return;
+
+                member.roles.add(role);
+            })
         })
 
         resolve(true)
     })
 }
-
-function parseCommand(message) {
-    let hasPrefix = message.content.startsWith(PREFIX)
-
-    if (!hasPrefix) return;
-
-    let args = message.content.trim().substr(PREFIX.length).split(' ')
-
-    switch (args[0]) {
-        case "puhista": {
-            if (!message.member.hasPermission("ADMINISTRATOR")) return;
-
-            let embed = new Discord.MessageEmbed().setColor(0xF4E542);
-
-            if (args[1] >= 2 && args[1] <= 99) {
-                embed.setDescription(`Poistin ${args[1]} viestiä.`)
-                let amount = parseInt(args[1]) + 1;
-                message.channel.bulkDelete(amount)
-                    .then(() => {
-                        message.channel.send(embed)
-                            .then(message => message.delete({ timeout: 4000 }))
-                            .catch(err => console.info(err))
-                    })
-                    .catch(error => console.error(error));
-            } else {
-                let embed = syntaxEmbed({ configuration, args })
-                message.channel.send(embed).catch(err => console.info(err))
-            }
-            break;
-        }
-        case "hirvitysfiltteri": {
-            if (message.guild === null) return;
-
-            if (!message.member.hasPermission("ADMINISTRATOR")) return;
-
-            let args = message.content.trim().split(' ')
-
-            if (args[1] == 'true' || args[1] == 'päälle' || args[1] == 'on') {
-                hirvitysFiltteri = true
-            } else if (args[1] == 'false' || args[1] == 'pois' || args[1] == 'off') {
-                hirvitysFiltteri = false
-            }
-
-            if (hirvitysFiltteri) {
-                message.channel.send('Hirvitysfiltteri o päällä bro. Sanat "' + FORBIDDEN_WORDS.join(', ') + '" katoo ilman sisältöö')
-            } else {
-                message.channel.send('Hirvitysfiltteri ei oo päällä bro')
-            }
-            break;
-        }
-        case "sendmessage": {
-            let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-            if (!guild) return;
-
-            let member = guild.members.cache.get(message.author.id);
-
-            if (!member) return;
-
-            if (!member.hasPermission("ADMINISTRATOR")) return;
-
-            if (!args[1] || !args[2]) return;
-
-            let targetChannelId = args[1]
-
-            let targetChannel = guild.channels.cache.get(targetChannelId)
-
-            if (!targetChannel) return;
-
-            if (args[3]) {
-                for (let i = 3; i < args.length; i++) {
-                    args[2] = args[2] + ' ' + args[i];
-                }
-            }
-
-            targetChannel.send(args[2])
-            break;
-        }
-        case "komppaniassaherätys": {
-            message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
-            break;
-        }
-
-    }
-}
-
 
 client.on('ready', async () => {
 
@@ -239,12 +173,12 @@ client.on('ready', async () => {
     await cacheRequiredMessages()
 
     // Update server status and add missing roles
-    await updateServerStatus()
+    // await updateMinecraftServerStatus()
     await updateAutomatedRoles()
 
     // Update the info channel names in discord every 10 minutes
     let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
-        updateServerStatus()
+        updateMinecraftServerStatus()
     });
 
     // Check that the bot has given necessary roles every hour
@@ -255,25 +189,13 @@ client.on('ready', async () => {
     console.log(chalk.blue("//// Botti virallisesti hereillä."))
     console.log(chalk.blue("//// Käynnistyminen kesti"), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
     console.log(chalk.blue("//// Discord serverillä yhteensä", chalk.yellow(cachedMemberCount), chalk.blue('pelaajaa')))
-    console.log(chalk.blue("//// Minecraftissa tällä hetkellä", chalk.yellow(cachedServerStatus.players.online), chalk.blue('pelaajaa')))
-    console.log(chalk.blue("//// Hirvitysfiltteri", hirvitysFiltteri ? chalk.yellow("päällä") : chalk.red("pois päältä")))
-})
-
-client.on('message', async (message) => {
-    if (message.author.bot) return;
-
-    if (hirvitysFiltteri && message.deletable) {
-        FORBIDDEN_WORDS.forEach(word => {
-            if (message.content.toLowerCase() === "ok" || message.content.toLowerCase() === "eiku") {
-                return message.delete({ reason: "stop, hirvitysfiltteri ei hyväksy" })
-            }
-        })
-    }
-
-    if (message.content.toLowerCase().startsWith(PREFIX)) {
-        parseCommand(message)
+    if (cachedMinecraftServerStatus) {
+        console.log(chalk.blue("//// Minecraftissa tällä hetkellä", chalk.yellow(cachedMinecraftServerStatus.players.online), chalk.blue('pelaajaa')))
+    } else {
+        console.log(chalk.red("//// Minecraftissa palvelin tuntuisi olevan pois päältä."))
     }
 })
+
 
 client.on("messageReactionAdd", (reaction, user) => {
     parseReaction({
@@ -299,7 +221,7 @@ client.on('error', (err) => console.log("ERROR ON CLIENT:", err))
 
 client.on('warn', (warn) => console.warn(warn))
 
-process.on('uncaughtException', (err) => console.log("EXCEPTION ON PROCESS:", err))
+process.on('uncaughtException', (err) => console.log("UNCAUGHT EXCEPTION ON PROCESS:", err))
 
 
 
