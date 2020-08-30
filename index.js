@@ -15,7 +15,9 @@ const authorize = require('./authorize.json')
 const client = new Discord.Client()
 
 const reactionListeners = require('./reaction_handling/listeners.js')
-const twitch = require('./twitch_integration/twitch.js')
+const TwitchEmitter = require('./twitch_integration/twitch.js')
+
+const testitwitchMessageChannel = "749663615547605142"
 
 let cachedMinecraftServerStatus = null;
 let cachedMemberCount = null;
@@ -170,9 +172,46 @@ function updateAutomatedRoles() {
     })
 }
 
-client.on('ready', async () => {
+TwitchEmitter.on('streamChange', (change) => {
+    if (!change.data || !change.data.user) return;
 
-    return;
+    let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD);
+    let channel = guild.channels.cache.get(testitwitchMessageChannel)
+    let role = guild.roles.cache.find(role => role.name === "Twitch")
+
+    let embed = new Discord.MessageEmbed()
+
+
+    if (change.type !== "online") return;
+
+    let thumbnailUrl = change.data.thumbnail;
+
+    let streamUrl = `https://www.twitch.tv/${change.data.user}`;
+
+    if (thumbnailUrl) {
+        thumbnailUrl = thumbnailUrl.replace('{width}', "1920")
+        thumbnailUrl = thumbnailUrl.replace('{height}', "1080")
+    }
+
+    embed
+        .setAuthor('Karanteenin Twitch Ilmoittaja',)
+        .setColor('#fdf500')
+        .setTitle(change.data.user + " on livenä! - Twitch")
+        .setImage(thumbnailUrl)
+        .setDescription(change.data.user+' - '+change.data.title)
+        .setURL(streamUrl)
+        .setTimestamp()
+        .setFooter('Twitch ilmoitus provided by karanteeni', 'https://i.imgur.com/WWmTu7c.png')
+        .addField(`\u200b`, '[Tule seuraamaan Karanteenin ylläpidon streamia!]('+streamUrl+')')
+        .setThumbnail( change.data.profilePicture)
+
+        channel.send(embed)
+        channel.send(`[ <@&${role.id}> ]`)
+        
+})
+
+client.on('ready', async () => {
+    return
     // Cache messages required for updating roles
     await cacheRequiredMessages()
 
@@ -192,7 +231,7 @@ client.on('ready', async () => {
     });
 
 
-    
+
     console.log(chalk.blue("//// Botti virallisesti hereillä."))
     console.log(chalk.blue("//// Käynnistyminen kesti"), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
     console.log(chalk.blue("//// Discord serverillä yhteensä", chalk.yellow(cachedMemberCount), chalk.blue('pelaajaa')))
@@ -201,7 +240,7 @@ client.on('ready', async () => {
     } else {
         console.log(chalk.red("//// Minecraftissa palvelin tuntuisi olevan pois päältä."))
     }
-    
+
 })
 
 
