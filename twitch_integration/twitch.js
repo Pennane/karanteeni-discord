@@ -2,6 +2,7 @@
 
 
 const authorize = require('../authorize.json')
+const configuration = require('../configuration.json')
 
 const axios = require('axios')
 const { ApiClient } = require('twitch')
@@ -43,12 +44,20 @@ axios.post(`https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secre
 
         const user = await apiClient.helix.users.getUserById(twitchUserId);
 
-        // This garbage needs ngrok. How could I make it not to.
-        const listener = await WebHookListener.create(apiClient, {
-            hostName: "b82443d71f37.ngrok.io",
-            port: 8090,
-            reverseProxy: { port: 443, ssl: true }
-        })
+        let listener;
+
+        if (configuration.TWITCH.LISTENER.NGROK) {
+            listener = await WebHookListener.create(apiClient, {
+                hostName: configuration.TWITCH.LISTENER.HOSTNAME,
+                port: 8090,
+                reverseProxy: { port: 443, ssl: true }
+            })
+        } else {
+            listener = new WebHookListener(apiClient, new SimpleAdapter({
+                hostName: configuration.TWITCH.LISTENER.HOSTNAME,
+                listenerPort: 8090
+            }));
+        }
 
         listener.listen();
 
@@ -59,13 +68,11 @@ axios.post(`https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secre
                 if (!prevStream) {
                     TwitchEmitter.emit("streamChange", {
                         type: "online",
-                        data: {
-                            user: stream.userDisplayName,
-                            title: stream.title,
-                            thumbnail: stream.thumbnailUrl,
-                            profilePicture: user.profilePictureUrl,
-                            offlineImage: user.offline_image_url || null
-                        }
+                        user: stream.userDisplayName,
+                        title: stream.title,
+                        thumbnail: stream.thumbnailUrl,
+                        profilePicture: user.profilePictureUrl,
+                        offlineImage: user.offline_image_url || null
                     });
                 }
             }

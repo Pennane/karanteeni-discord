@@ -5,69 +5,20 @@ let startingDate = Date.now()
 const Discord = require('discord.js')
 const schedule = require('node-schedule')
 const chalk = require('chalk')
-const axios = require('axios').default;
 
 const configuration = require('./configuration.json')
 const authorize = require('./authorize.json')
 
 const client = new Discord.Client()
 
+const serverStatus = require('./server_status/status.js')
+
 const reactionListeners = require('./reaction_handling/listeners.js')
+
 const TwitchEmitter = require('./twitch_integration/twitch.js')
+const TwitchNotifier = require('./twitch_integration/notify.js')
 
-const testitwitchMessageChannel = "749663615547605142"
-
-let cachedMinecraftServerStatus = null;
-let cachedMemberCount = null;
-
-function fetchMinecraftServerStatus() {
-    return new Promise((resolve, reject) => {
-        axios.get('https://api.mcsrvstat.us/2/mc.karanteeni.net')
-            .then(function (response) {
-                resolve(response.data)
-            })
-            .catch(function (error) {
-                reject(error)
-            });
-    });
-}
-
-function updateMinecraftServerStatus() {
-    return new Promise(async (resolve, reject) => {
-        let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-
-        let playersOnMinecraftServerChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_MINECRAFT_SERVER);
-        let usersOnDiscordChannel = guild.channels.cache.get(configuration.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD);
-
-        let minecraftServerStatus = await fetchMinecraftServerStatus();
-
-        if (!playersOnMinecraftServerChannel.editable || !usersOnDiscordChannel.editable) {
-            return console.log("Unable to edit required channels. Aborting.")
-        }
-
-        if (minecraftServerStatus && minecraftServerStatus.online === true && (!cachedMinecraftServerStatus || minecraftServerStatus.players.online !== cachedMinecraftServerStatus.players.online)) {
-            playersOnMinecraftServerChannel.edit({ name: "Pelaajia servulla: " + minecraftServerStatus.players.online })
-                .catch(err => console.log(err))
-        } else if (minecraftServerStatus && minecraftServerStatus.online === false && (!cachedMinecraftServerStatus || cachedMinecraftServerStatus.online !== false)) {
-            playersOnMinecraftServerChannel.edit({ name: "Palvelin poissa päältä" })
-                .catch(err => console.log(err))
-        } else if (!minecraftServerStatus && cachedMinecraftServerStatus) {
-            playersOnMinecraftServerChannel.edit({ name: "Pelaajia servulla: ?" })
-                .catch(err => console.log(err))
-        }
-
-        if (!cachedMemberCount || guild.memberCount !== cachedMemberCount) {
-            usersOnDiscordChannel.edit({ name: "Pelaajia discordissa: " + guild.memberCount })
-                .catch(err => console.log(err))
-        }
-
-        cachedMinecraftServerStatus = minecraftServerStatus;
-        cachedMemberCount = guild.memberCount;
-
-        resolve(true)
-    })
-}
-
+// Caches required messages for automated role updating from reactions
 function cacheRequiredMessages() {
     return new Promise((resolve, reject) => {
         let promises = []
@@ -80,52 +31,32 @@ function cacheRequiredMessages() {
         })
 
         Promise.all(promises)
-            .then(values => {
-                resolve()
-            })
+            .then(() => resolve())
             .catch(error => console.log('failed to cache required messages', error));
     })
 }
 
-function toggleRole(user, roleName, type) {
-    let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-    if (!guild) throw new Error("Client has an invalid main guild id")
+
+function toggleRole(member, roleName, type) {
+    let guild = member.guild;
+
+    if (configuration.DISCORD.ID_MAP.GUILD !== guild.id) throw new Error("Tried to toggle role for wrong guild")
 
     let role = guild.roles.cache.find(role => role.name === roleName)
-    if (!role) throw new Error("Main guild does not have a role named '" + roleName + "'")
 
-    let member = guild.members.cache.get(user.id)
-    if (!member) throw new Error("Guild does not have received user as a member")
+    if (!role) throw new Error("Main guild does not have a role named '" + roleName + "'")
 
     if (type === "ADD") {
         member.roles.add(role);
     } else if (type === "REMOVE") {
         member.roles.remove(role);
     }
-
-}
-
-function parseReaction(reaction) {
-    let reactionListener = reactionListeners.find(listener => {
-        let correctChannel = listener.location.message === reaction.reaction.message.id;
-        let correctEmoji = reaction.reaction._emoji.id === null ? listener.emoji.name === reaction.reaction._emoji.name : listener.emoji.id === reaction.reaction._emoji.id
-
-        return correctChannel && correctEmoji;
-    })
-
-    if (!reactionListener) return;
-
-    if (reaction.type === "ADD") {
-        toggleRole(reaction.user, reactionListener.role.name, "ADD")
-    } else if (reactionListener.role.removable && reaction.type === "REMOVE") {
-        toggleRole(reaction.user, reactionListener.role.name, "REMOVE")
-    }
-
 }
 
 function updateAutomatedRoles() {
     return new Promise(async (resolve, reject) => {
-        let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
+        const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+
         if (!guild) throw new Error("Client has an invalid MAIN_GUILD_ID")
 
         reactionListeners.forEach(async listener => {
@@ -170,58 +101,56 @@ function updateAutomatedRoles() {
     })
 }
 
-TwitchEmitter.on('streamChange', (change) => {
-    if (!change.data || !change.data.user) return;
-    if (change.type !== "online") return;
+function parseReaction(reaction) {
+    let reactionListener = reactionListeners.find(listener => {
+        let correctChannel = listener.location.message === reaction.reaction.message.id;
+        let correctEmoji = reaction.reaction._emoji.id === null ? listener.emoji.name === reaction.reaction._emoji.name : listener.emoji.id === reaction.reaction._emoji.id
+        return correctChannel && correctEmoji;
+    })
 
-    let embed = new Discord.MessageEmbed()
+    if (!reactionListener) return;
 
-    let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD);
-    let channel = guild.channels.cache.get(testitwitchMessageChannel)
+    let member = reaction.message.guild.member(reaction.user);
+
+    if (!member) return;
+
+    if (reaction.type === "ADD") {
+        toggleRole(member, reactionListener.role.name, "ADD")
+    } else if (reactionListener.role.removable && reaction.type === "REMOVE") {
+        toggleRole(member, reactionListener.role.name, "REMOVE")
+    }
+}
+
+
+TwitchEmitter.on('streamChange', (data) => {
+    if (!data || !data.user) return;
+    if (data.type !== "online") return;
+
+    let channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.TWITCH_NOTIFICATIONS)
     let role = guild.roles.cache.find(role => role.name === "Twitch")
 
-    let thumbnailUrl = change.data.thumbnail;
-    let streamUrl = `https://www.twitch.tv/${change.data.user}`;
-
-    if (thumbnailUrl) {
-        thumbnailUrl = thumbnailUrl.replace('{width}', "1920")
-        thumbnailUrl = thumbnailUrl.replace('{height}', "1080")
-    }
-
-    embed
-        .setAuthor('Karanteenin Twitch Ilmoittaja'/*, "https://i.imgur.com/WWmTu7c.png"*/)
-        .setColor('#fdf500')
-        .setTitle(change.data.user + " on linjoilla! - Twitch")
-        .setImage(thumbnailUrl)
-        .setDescription(change.data.user+' - '+change.data.title)
-        .setURL(streamUrl)
-        .setTimestamp()
-        .setThumbnail( change.data.profilePicture)
-        .setFooter('Twitch ilmoitus provided by karanteeni', 'https://i.imgur.com/WWmTu7c.png')
-        .addField(`\u200b`, '[Tule seuraamaan Karanteenin ylläpidon streamia!]('+streamUrl+')')
-        
-        let message = new Discord.APIMessage(channel, {
-            content: `[ <@&${role.id}> ]`,
-            embed: embed
-        });
-
-        channel.send(message)
-        
+    TwitchNotifier.notify({
+        streamChange: data,
+        notifyRole: role,
+        destination: channel
+    })
 })
 
+
 client.on('ready', async () => {
-    
+    const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
     // Cache messages required for updating roles
     await cacheRequiredMessages()
 
-    // Update server status and add missing roles
-    await updateMinecraftServerStatus()
+    // Update server status 
+    await serverStatus.update(guild)
 
+    // Add missing roles
     await updateAutomatedRoles()
 
     // Update the info channel names in discord every 10 minutes
     let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
-        updateMinecraftServerStatus()
+        serverStatus.update()
     });
 
     // Check that the bot has given necessary roles every hour
@@ -229,15 +158,13 @@ client.on('ready', async () => {
         updateAutomatedRoles()
     });
 
-
-
     console.log(chalk.blue("//// Botti virallisesti hereillä."))
     console.log(chalk.blue("//// Käynnistyminen kesti"), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
-    console.log(chalk.blue("//// Discord serverillä yhteensä", chalk.yellow(cachedMemberCount), chalk.blue('pelaajaa')))
-    if (cachedMinecraftServerStatus) {
-        console.log(chalk.blue("//// Minecraftissa tällä hetkellä", chalk.yellow(cachedMinecraftServerStatus.players.online), chalk.blue('pelaajaa')))
+    console.log(chalk.blue("//// Discord serverillä yhteensä", chalk.yellow(guild.memberCount), chalk.blue('pelaajaa')))
+    if (serverStatus.cached()) {
+        console.log(chalk.blue("//// Minecraftissa tällä hetkellä", chalk.yellow(serverStatus.cached().players.online), chalk.blue('pelaajaa')))
     } else {
-        console.log(chalk.red("//// Minecraftissa palvelin tuntuisi olevan pois päältä."))
+        console.log(chalk.red("//// Minecraft palvelin tuntuisi olevan pois päältä."))
     }
 })
 
@@ -259,8 +186,6 @@ client.on("messageReactionRemove", (reaction, user) => {
     })
 })
 
-
-
 client.on('reconnecting', () => console.log("BOT RECONNECTING"))
 
 client.on('resume', () => console.log("BOT RESUMED SUCCESFULLY"))
@@ -270,7 +195,6 @@ client.on('error', (err) => console.log("ERROR ON CLIENT:", err))
 client.on('warn', (warn) => console.warn(warn))
 
 process.on('uncaughtException', (err) => console.log("UNCAUGHT EXCEPTION ON PROCESS:", err))
-
 
 
 client.login(authorize.discord.token)
