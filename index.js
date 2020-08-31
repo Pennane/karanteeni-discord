@@ -12,11 +12,11 @@ const authorize = require('./authorize.json')
 const client = new Discord.Client()
 
 const serverStatus = require('./server_status/status.js')
-
 const reactionListeners = require('./reaction_handling/listeners.js')
+const messageHandler = require('./message_handling/handler.js')
+const twitchEmitter = require('./twitch_integration/twitch.js')
+const twitchNotifier = require('./twitch_integration/notify.js')
 
-const TwitchEmitter = require('./twitch_integration/twitch.js')
-const TwitchNotifier = require('./twitch_integration/notify.js')
 
 // Caches required messages for automated role updating from reactions
 function cacheRequiredMessages() {
@@ -110,7 +110,9 @@ function parseReaction(reaction) {
 
     if (!reactionListener) return;
 
-    let member = reaction.message.guild.member(reaction.user);
+    const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+
+    let member = guild.member(reaction.user);
 
     if (!member) return;
 
@@ -122,23 +124,23 @@ function parseReaction(reaction) {
 }
 
 
-TwitchEmitter.on('streamChange', (data) => {
+twitchEmitter.on('streamChange', (data) => {
     if (!data || !data.user) return;
     if (data.type !== "online") return;
 
-    let channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.TWITCH_NOTIFICATIONS)
-    let role = guild.roles.cache.find(role => role.name === "Twitch")
+    let channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.twitch_NOTIFICATIONS)
+    let role = guild.roles.cache.find(role => role.name === "twitch")
 
-    TwitchNotifier.notify({
+    twitchNotifier.notify({
         streamChange: data,
         notifyRole: role,
         destination: channel
     })
 })
 
-
 client.on('ready', async () => {
-    const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+    const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+
     // Cache messages required for updating roles
     await cacheRequiredMessages()
 
@@ -150,7 +152,7 @@ client.on('ready', async () => {
 
     // Update the info channel names in discord every 10 minutes
     let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
-        serverStatus.update()
+        serverStatus.update(guild)
     });
 
     // Check that the bot has given necessary roles every hour
@@ -166,6 +168,12 @@ client.on('ready', async () => {
     } else {
         console.log(chalk.red("//// Minecraft palvelin tuntuisi olevan pois päältä."))
     }
+})
+
+client.on('message', async (message) => {
+    const ignoreMessage = message.author.bot;
+    if (ignoreMessage) return;
+    messageHandler.parse(message, client)
 })
 
 // Sends added reactions to be handled

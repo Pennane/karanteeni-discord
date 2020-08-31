@@ -1,111 +1,126 @@
-// all of the useless command business
-
 const configuration = require('../configuration.json')
 
-const PREFIX = configuration.DISCORD.PREFIX
-const FORBIDDEN_WORDS = configuration.FORBIDDEN_WORDS
-
-let hirvitysFiltteri = false;
-
-
-
-function parseCommand(message) {
-    let hasPrefix = message.content.startsWith(PREFIX)
-
-    if (!hasPrefix) return;
-
-    let args = message.content.trim().substr(PREFIX.length).split(' ')
-
-    switch (args[0]) {
-        case "puhista": {
-            if (!message.member.hasPermission("ADMINISTRATOR")) return;
-
-            let embed = new Discord.MessageEmbed().setColor(0xF4E542);
-
-            if (args[1] >= 2 && args[1] <= 99) {
-                embed.setDescription(`Poistin ${args[1]} viestiä.`)
-                let amount = parseInt(args[1]) + 1;
-                message.channel.bulkDelete(amount)
-                    .then(() => {
-                        message.channel.send(embed)
-                            .then(message => message.delete({ timeout: 4000 }))
-                            .catch(err => console.info(err))
-                    })
-                    .catch(error => console.error(error));
-            } else {
-                let embed = syntaxEmbed({ configuration, args })
-                message.channel.send(embed).catch(err => console.info(err))
-            }
-            break;
-        }
-        case "hirvitysfiltteri": {
-            if (message.guild === null) return;
-
-            if (!message.member.hasPermission("ADMINISTRATOR")) return;
-
-            let args = message.content.trim().split(' ')
-
-            if (args[1] == 'true' || args[1] == 'päälle' || args[1] == 'on') {
-                hirvitysFiltteri = true
-            } else if (args[1] == 'false' || args[1] == 'pois' || args[1] == 'off') {
-                hirvitysFiltteri = false
-            }
-
-            if (hirvitysFiltteri) {
-                message.channel.send('Hirvitysfiltteri o päällä bro. Sanat "' + FORBIDDEN_WORDS.join(', ') + '" katoo ilman sisältöö')
-            } else {
-                message.channel.send('Hirvitysfiltteri ei oo päällä bro')
-            }
-            break;
-        }
-        case "sendmessage": {
-            let guild = client.guilds.cache.get(configuration.ID_MAP.GUILD)
-            if (!guild) return;
-
-            let member = guild.members.cache.get(message.author.id);
-
-            if (!member) return;
-
-            if (!member.hasPermission("ADMINISTRATOR")) return;
-
-            if (!args[1] || !args[2]) return;
-
-            let targetChannelId = args[1]
-
-            let targetChannel = guild.channels.cache.get(targetChannelId)
-
-            if (!targetChannel) return;
-
-            if (args[3]) {
-                for (let i = 3; i < args.length; i++) {
-                    args[2] = args[2] + ' ' + args[i];
-                }
-            }
-
-            targetChannel.send(args[2])
-            break;
-        }
-        case "komppaniassaherätys": {
-            message.author.send('Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.')
-            break;
-        }
-
-    }
+function isObject(o) {
+    return typeof o === 'object' && o !== null
 }
 
+function isArray(a) {
+    return Array.isArray(a)
+}
 
-client.on('message', async (message) => {
-    if (message.author.bot) return;
+function isFunction(f) {
+    return typeof f === "function"
+}
 
-    if (hirvitysFiltteri && message.deletable) {
-        FORBIDDEN_WORDS.forEach(word => {
-            if (message.content.toLowerCase() === "ok" || message.content.toLowerCase() === "eiku") {
-                return message.delete({ reason: "stop, hirvitysfiltteri ei hyväksy" })
-            }
-        })
+const commandTypes = [
+    {
+        name: 'hauskat',
+        description: 'Sekalaisia juksutuksia',
+        emoji: ':100:'
+    },
+    {
+        name: 'työkalut',
+        description: 'Hyödyllisiä toimintoja',
+        emoji: ':wrench:'
+    },
+    {
+        name: 'kuvat',
+        description: 'Kuvien manipulointia',
+        emoji: ':frame_photo:'
+    },
+    {
+        name: 'admin',
+        description: 'Vain ylläpitäjille',
+        emoji: ':crown:'
+    },
+    {
+        name: "muut",
+        description: "Muita komentoja",
+        emoji: ':grey_question:'
+    }
+]
+
+const typeNames = commandTypes.map(type => type.name);
+
+class Command {
+    constructor({ configuration, executor }, filename) {
+        if (!configuration || !isObject(configuration)) {
+            console.warn(`WARNING - ${filename} : configuration not present`)
+        }
+        if (!configuration.triggers || !isArray(configuration.triggers)) {
+            console.warn(`WARNING - ${filename} : triggers not present`)
+        }
+        if (!executor || !isFunction(executor)) {
+            throw new Error(`ERROR - ${filename} : functionality not present`)
+        }
+
+        let types = []
+        if (configuration.type) {
+            configuration.type.forEach(type => {
+                if (typeNames.indexOf(type.toLowerCase()) !== -1) {
+                    types.push(type.toLowerCase())
+                }
+            });
+        }
+        this.type = types.length === 0 ? ["other"] : types;
+        if (configuration.hidden) {
+            this.type = ["hidden"]
+            this.hidden = true;
+        }
+        this.name = configuration.name
+        this.description = configuration.desc
+        this.syntax = configuration.syntax
+        this.triggers = [...new Set(configuration.triggers)]
+        this.adminCommand = configuration.admin
+        this.superAdminCommand = configuration.superadmin
+        this.executor = executor
+
+        this.requireGuild = typeof configuration.requireGuild === "boolean" ? configuration.requireGuild : true;
+
+        if (this.adminCommand && this.type.indexOf('admin') === -1) {
+            this.type.push('admin')
+        }
+
     }
 
-    if (message.content.toLowerCase().startsWith(PREFIX)) {
-        parseCommand(message)
+    static commandTypes() {
+        return commandtypes
     }
-})
+
+    static isMemberAdminAuthorized(message, client) {
+        if (message.member) {
+            return message.member.hasPermission('ADMINISTRATOR')
+        } else {
+            const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+            const member = guild.member(message.author)
+            
+            return member.hasPermission('ADMINISTRATOR')
+        }
+        
+       
+    }
+
+    unauthorizedAction(message) {
+        message.reply("Sinulla ei ole oikeutta käyttää komentoa " + this.name)
+    }
+
+    execute(message, client, args) {
+        if (this.requireGuild && !message.guild) return;
+
+        let adminAuthorization = false;
+
+        if (this.adminCommand) {
+            adminAuthorization = Command.isMemberAdminAuthorized(message, client)
+        }
+
+        if (this.adminCommand && !adminAuthorization) {
+            return this.unauthorizedAction(message)
+        }
+
+        this.executor(message, client, args)
+            .catch(err => console.info(err))
+    }
+
+}
+
+module.exports = Command;
