@@ -6,14 +6,14 @@
             "CHANNELS": {
                 "CURRENT_PLAYERS_ON_MINECRAFT_SERVER": "726867745328595005",
                 "ALL_PLAYERS_ON_DISCORD": "726867540134854767",
-                "TWITCH_NOTIFICATIONS": "749663615547605142"
+                "TWITCH_NOTIFICATIONS": "749599869609574462"
             }
         }
     },
     "TWITCH": {
         "LISTENER": {
             "NGROK": true,
-            "HOSTNAME": "cffa991f671b.ngrok.io"
+            "HOSTNAME": "16da074723e7.ngrok.io"
         }
     }
 }
