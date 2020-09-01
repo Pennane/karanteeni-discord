@@ -4,7 +4,7 @@ const configuration = require('../configuration.json')
 
 let serverStatusUrl = 'https://api.mcsrvstat.us/2/mc.karanteeni.net'
 
-let cachedMinecraftServerStatus = null;
+let cachedServerStatus = null;
 let cachedMemberCount = null;
 
 function fetchMinecraftServerStatus() {
@@ -32,30 +32,6 @@ function updateServerStatus(guild) {
             return console.log("Unable to edit required channels. Aborting.")
         }
 
-        if (serverStatus && serverStatus.online === true && (!cachedMinecraftServerStatus || serverStatus.players.online !== cachedMinecraftServerStatus.players.online)) {
-
-            minecraftplayersUpdateChannel.edit({
-                name: "Pelaajia servulla: " + serverStatus.players.online
-            })
-                .catch(err => console.log(err))
-
-        } else if (serverStatus && serverStatus.online === false && (!cachedMinecraftServerStatus || cachedMinecraftServerStatus.online !== false)) {
-
-            minecraftplayersUpdateChannel.edit({
-                name: "Palvelin poissa päältä"
-            })
-                .catch(err => console.log(err))
-
-        } else if (!serverStatus && cachedMinecraftServerStatus) {
-
-            minecraftplayersUpdateChannel.edit({
-                name: "Pelaajia servulla: ?"
-            })
-                .catch(err => console.log(err))
-
-        }
-
-
         if (!cachedMemberCount || guild.memberCount !== cachedMemberCount) {
 
             discordusersUpdateChannel.edit({
@@ -65,7 +41,43 @@ function updateServerStatus(guild) {
 
         }
 
-        cachedMinecraftServerStatus = serverStatus;
+
+        let statusHasPlayercount = serverStatus && serverStatus.players && serverStatus.players.online;
+        let cachedStatusHasPlayercount = cachedServerStatus && cachedServerStatus.players && cachedServerStatus.players.online;
+
+        if (!serverStatus) {
+            // API down
+            minecraftplayersUpdateChannel.edit({
+                name: "Pelaajia servulla: ?"
+            })
+                .catch(err => console.log(err))
+        }
+        else if (statusHasPlayercount) {
+
+            if (!cachedStatusHasPlayercount || serverStatus.players.online !== cachedServerStatus.players.online) {
+
+                minecraftplayersUpdateChannel.edit({
+                    name: "Pelaajia servulla: " + serverStatus.players.online
+                })
+                    .catch(err => console.log(err))
+
+            }
+
+        } else if (serverStatus.online === false) {
+
+            if (!cachedServerStatus || cachedServerStatus.online !== false) {
+
+                minecraftplayersUpdateChannel.edit({
+                    name: "Palvelin poissa päältä"
+                })
+                    .catch(err => console.log(err))
+
+            }
+
+        }
+
+
+        cachedServerStatus = serverStatus;
         cachedMemberCount = guild.memberCount;
 
         resolve()
@@ -74,5 +86,5 @@ function updateServerStatus(guild) {
 
 module.exports = {
     update: updateServerStatus,
-    cached: () => cachedMinecraftServerStatus
+    cached: () => cachedServerStatus
 }
