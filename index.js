@@ -128,9 +128,11 @@ twitchEmitter.on('streamChange', (data) => {
     if (!data || !data.user) return;
     if (data.type !== "online") return;
 
-    let channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.twitch_NOTIFICATIONS)
-    let role = guild.roles.cache.find(role => role.name === "twitch")
+    const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
 
+    let channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.TWITCH_NOTIFICATIONS)
+    let role = guild.roles.cache.find(role => role.name === "Twitch")
+    
     twitchNotifier.notify({
         streamChange: data,
         notifyRole: role,

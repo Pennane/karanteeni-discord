@@ -1,6 +1,5 @@
 
 
-
 const authorize = require('../authorize.json')
 const configuration = require('../configuration.json')
 
@@ -18,20 +17,16 @@ const clientSecret = authorize.twitch.clientSecret;
 
 const twitchUserId = "516475106"
 
-/*
-// Test emit
+/* Test emit
 setTimeout(() => {
     TwitchEmitter.emit("streamChange", {
         type: "online",
-        data: {
-            user: "KaranteeniServer",
-            title: "Test",
-            thumbnail: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_karanteeniserver-{width}x{height}.jpg',
-            profilePicture: 'https://static-cdn.jtvnw.net/jtv_user_pictures/3f577ff9-b375-4649-bd57-dd49d68255a8-profile_image-300x300.png'
-        }
-
+        user: "KaranteeniServer",
+        title: "Test",
+        thumbnail: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_karanteeniserver-{width}x{height}.jpg',
+        profilePicture: 'https://static-cdn.jtvnw.net/jtv_user_pictures/3f577ff9-b375-4649-bd57-dd49d68255a8-profile_image-300x300.png'
     });
-}, 3000)
+}, 3000)   
 return;
 */
 
@@ -60,27 +55,22 @@ axios.post(`https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secre
         }
 
         listener.listen();
-
-        let prevStream = await apiClient.helix.streams.getStreamByUserName(twitchUserId);
-
+        let prevStream = await apiClient.helix.streams.getStreamByUserId(twitchUserId);
         const subscription = await listener.subscribeToStreamChanges(twitchUserId, async (stream) => {
             if (stream) {
                 if (!prevStream) {
+                    let game = stream.gameId ? apiClient.helix.games.getGameById(stream.gameId) : null;
                     TwitchEmitter.emit("streamChange", {
                         type: "online",
                         user: stream.userDisplayName,
                         title: stream.title,
                         thumbnail: stream.thumbnailUrl,
                         profilePicture: user.profilePictureUrl,
-                        offlineImage: user.offline_image_url || null
+                        offlineImage: user.offline_image_url || null,
+                        game: await game
                     });
                 }
             }
             prevStream = stream;
         });
     })
-
-
-
-
-

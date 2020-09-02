@@ -51,8 +51,7 @@ function updateServerStatus(guild) {
                 name: "Pelaajia servulla: ?"
             })
                 .catch(err => console.log(err))
-        }
-        else if (statusHasPlayercount) {
+        } else if (statusHasPlayercount) {
 
             if (!cachedStatusHasPlayercount || serverStatus.players.online !== cachedServerStatus.players.online) {
 

@@ -1,7 +1,9 @@
 const Discord = require('discord.js')
 
 function notifyRole(notifyRequest) {
-    let {streamChange, notifyRole, destination} = notifyRequest;
+    let { streamChange, notifyRole, destination } = notifyRequest;
+
+    console.log(streamChange)
 
     let embed = new Discord.MessageEmbed()
     let thumbnailUrl = streamChange.thumbnail;
@@ -13,18 +15,20 @@ function notifyRole(notifyRequest) {
     }
 
     embed
-        .setAuthor('Karanteenin Twitch Ilmoittaja')
+        .setAuthor(streamChange.user, streamChange.profilePicture)
         .setColor('#fdf500')
-        .setTitle(streamChange.user + " on linjoilla! - Twitch")
+        .setTitle(streamChange.title, streamUrl)
         .setImage(thumbnailUrl)
-        .setDescription(streamChange.user + ' - ' + streamChange.title)
         .setURL(streamUrl)
         .setTimestamp()
         .setThumbnail(streamChange.profilePicture)
-        .setFooter('Twitch ilmoitus provided by karanteeni', 'https://i.imgur.com/WWmTu7c.png')
-        .addField(`\u200b`, '[Tule seuraamaan Karanteenin ylläpidon streamia!](' + streamUrl + ')')
+        .setFooter('Stream ilmoitus', 'https://i.imgur.com/WWmTu7c.png')
 
-    let message = new Discord.APIMessage(channel, {
+    if (streamChange.game) {
+        embed.addField(`Peli`, streamCwhange.game.name, true)
+    }
+
+    let message = new Discord.APIMessage(destination, {
         content: `[ <@&${notifyRole.id}> ]`,
         embed: embed
     });
