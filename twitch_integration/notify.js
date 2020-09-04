@@ -25,7 +25,7 @@ function notifyRole(notifyRequest) {
         .setFooter('Stream ilmoitus', 'https://i.imgur.com/WWmTu7c.png')
 
     if (streamChange.game) {
-        embed.addField(`Peli`, streamCwhange.game.name, true)
+        embed.addField(`Peli`, streamChange.game.name, true)
     }
 
     let message = new Discord.APIMessage(destination, {
