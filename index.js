@@ -180,6 +180,7 @@ client.on('message', async (message) => {
 
 // Sends added reactions to be handled
 client.on("messageReactionAdd", (reaction, user) => {
+    if (user.bot) return;
     parseReaction({
         reaction: reaction,
         user: user,
@@ -189,6 +190,7 @@ client.on("messageReactionAdd", (reaction, user) => {
 
 // Sends removed reactions to be handled
 client.on("messageReactionRemove", (reaction, user) => {
+    if (user.bot) return;
     parseReaction({
         reaction: reaction,
         user: user,
