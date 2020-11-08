@@ -2,9 +2,11 @@ const Discord = require('discord.js');
 
 let serverStatus = require('../../server_status/status.js').cached
 
+let minecraftChatId = '613071441268834304'
+
 const configuration = {
     name: "list",
-    admin: true,
+    admin: false,
     syntax: "list",
     desc: "hakee pelaajat palvelimelta",
     triggers: ["list", "lista"],
@@ -15,6 +17,9 @@ const configuration = {
 module.exports = {
     executor: function (message, client, args) {
         return new Promise(async (resolve, reject) => {
+            if (message.channel.id !== minecraftChatId) {
+                return
+            }
             let embed = new Discord.MessageEmbed().setColor(0xF4E542);
             let cachedStatus = serverStatus()
             if (!cachedStatus || !cachedStatus.players || !cachedStatus.players.list) {
