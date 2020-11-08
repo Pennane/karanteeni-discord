@@ -13,7 +13,7 @@
     "TWITCH": {
         "LISTENER": {
             "NGROK": true,
-            "HOSTNAME": "16da074723e7.ngrok.io"
+            "HOSTNAME": "3a18ab1c8548.ngrok.io"
         }
     }
 }
