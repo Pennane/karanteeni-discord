@@ -10,8 +10,9 @@ let cachedInteger = JSON.parse(
 ).lastSavedInteger;
 
 let configuration = require('../configuration.json')
-let countingChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
 let achievementChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_ACHIEVEMENTS
+
+let { ValueReturner } = require('../commands/command_files/returnvalue.js')
 
 let { specialMessages } = require('../message_handling/handler.js')
 
@@ -20,11 +21,15 @@ if (cachedInteger) {
     currentInteger = cachedInteger
 }
 
-
 let previousUsers = [];
 
 let userBuffer = 2;
 
+
+ValueReturner.on('returnedValue', (value) => {
+    saveValue(value)
+    console.log(value)
+})
 
 /* Valitsee ensimmäisen sopivan ylhäältä alas*/
 let achievements = [
@@ -37,6 +42,21 @@ let achievements = [
     [(current) => current % 1000 === 0 && current > 3000 && current <= 6000, (current, message) => "<@" + message.author.id + ">" + ' saavutti luvun ' + current],
     [(current) => current % 2500 === 0 && current > 6000, (current, message) => "<@" + message.author.id + ">" + ' saavutti luvun ' + current],
 ]
+
+
+function saveValue(value) {
+    cachedInteger = value
+    currentInteger = value
+    fs.writeFile(
+        "./count_up/data.json",
+        JSON.stringify({ lastSavedInteger: value }),
+        function (err) {
+            if (err) {
+                return console.info(err);
+            }
+        }
+    );
+}
 
 function notifyFromAchievement(achievementMessage, destination) {
     destination.send(achievementMessage)
@@ -78,7 +98,7 @@ specialMessages.on('countingGameMessage', ({ message, client }) => {
         backToStart(member, 'pelkkiä lukuja chattiin')
     } else if (previousUsers.indexOf(member.id) !== -1 && currentInteger !== 0) {
         backToStart(member, 'anna vähintään ' + userBuffer + ' pelaajan nostaa lukua ensin')
-    } else if (sentInteger !== currentInteger + 1 && currentInteger !== 0) {
+    } else if (sentInteger !== currentInteger + 1 && currentInteger > 1) {
         backToStart(member)
     } else if (sentInteger === currentInteger + 1 && previousUsers.indexOf(member.id) === -1) {
         currentInteger++;
@@ -99,16 +119,7 @@ specialMessages.on('countingGameMessage', ({ message, client }) => {
     }
 
     if (cachedInteger !== currentInteger) {
-        cachedInteger = currentInteger
-        fs.writeFile(
-            "./count_up/data.json",
-            JSON.stringify({ lastSavedInteger: cachedInteger }),
-            function (err) {
-                if (err) {
-                    return console.info(err);
-                }
-            }
-        );
+        saveValue(currentInteger)
     }
 });
 
