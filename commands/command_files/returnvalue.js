@@ -26,12 +26,12 @@ module.exports = {
 
             if (isNaN(value)) return;
 
-            const gameChannel = message.guild.channels.cache.get(clientConfiguration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
+            let gameChannel = message.guild.channels.cache.get(clientConfiguration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
             ValueReturner.emit('returnedValue', value)
 
             embed.setTitle("Palautetaan pelin arvoa...").setDescription('Asetetaan peliin arvo ' + value);
             message.channel.send(embed)
-            const gameChannel = message.guild.channels.cache.get(clientConfiguration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
+
             gameChannel.send('`!!PELIIN ON PALAUTETTU UUSI ARVO! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
                 .then(m => gameChannel.send(value)
                 ).catch(err => console.log(err))
