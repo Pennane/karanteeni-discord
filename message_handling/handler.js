@@ -2,11 +2,25 @@ const configuration = require('../configuration.json')
 
 let { commands, triggers } = require('../commands/loader.js').loaded();
 
+const { EventEmitter } = require('events');
+
 let prefix = configuration.DISCORD.PREFIX
 
+let countingChannelId = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
+
+
+let specialMessages = new EventEmitter();
 
 module.exports = {
+    specialMessages,
     parse: function (message, client) {
+        if (message.channel.id === countingChannelId) {
+            return specialMessages.emit('countingGameMessage', {
+                message,
+                client
+            })
+        }
+
         let hasPrefix = message.content.startsWith(prefix)
 
         if (!hasPrefix && message.content.includes('bad bot')) {

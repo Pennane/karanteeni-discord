@@ -16,7 +16,7 @@ const reactionListeners = require('./reaction_handling/listeners.js')
 const messageHandler = require('./message_handling/handler.js')
 const twitchEmitter = require('./twitch_integration/twitch.js')
 const twitchNotifier = require('./twitch_integration/notify.js')
-
+const { cachedInteger } = require('./count_up/index.js')
 
 // Caches required messages for automated role updating from reactions
 function cacheRequiredMessages() {
@@ -132,7 +132,7 @@ twitchEmitter.on('streamChange', (data) => {
 
     let channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.TWITCH_NOTIFICATIONS)
     let role = guild.roles.cache.find(role => role.name === "Twitch")
-    
+
     twitchNotifier.notify({
         streamChange: data,
         notifyRole: role,
@@ -140,11 +140,25 @@ twitchEmitter.on('streamChange', (data) => {
     })
 })
 
+function loadCachedNumberGame() {
+    return new Promise(async (resolve, reject) => {
+        const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+        const channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
+        channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`').then(message => {
+            channel.send(cachedInteger())
+        }).catch(err => console.log(err))
+        resolve()
+    })
+}
+
 client.on('ready', async () => {
     const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
 
     // Cache messages required for updating roles
     await cacheRequiredMessages()
+
+    // Send cached number from the number game
+    await loadCachedNumberGame()
 
     // Update server status 
     await serverStatus.update(guild)
