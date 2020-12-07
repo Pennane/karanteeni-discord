@@ -1,34 +1,32 @@
 const Discord = require('discord.js');
 const fs = require("fs");
 
-if (!fs.existsSync("./count_up/data.json")) {
-    fs.writeFileSync("./count_up/data.json", '{"lastSavedInteger": 0}');
-}
-
-let cachedInteger = JSON.parse(
-    fs.readFileSync("./count_up/data.json", "utf8")
-).lastSavedInteger;
 
 let configuration = require('../configuration.json')
 let achievementChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_ACHIEVEMENTS
 
-let { ValueReturner } = require('../commands/command_files/returnvalue.js')
+const { ValueReturner } = require('../commands/command_files/returnvalue.js')
+const { specialMessages } = require('../message_handling/handler.js')
 
-let { specialMessages } = require('../message_handling/handler.js')
-
-let currentInteger = 0;
-if (cachedInteger) {
-    currentInteger = cachedInteger
+if (!fs.existsSync("./count_up/data.json")) {
+    fs.writeFileSync("./count_up/data.json", '{"lastSavedInteger": 0, "highestAchievedInteger": 0}');
 }
 
+let cached = JSON.parse(
+    fs.readFileSync("./count_up/data.json", "utf8")
+)
+
+let currentInteger = 0;
+
+if (cached.lastSavedInteger) {
+    currentInteger = cached.lastSavedInteger
+}
 let previousUsers = [];
 
 let userBuffer = 2;
 
-
 ValueReturner.on('returnedValue', (value) => {
     saveValue(value)
-    console.log(value)
 })
 
 /* Valitsee ensimmäisen sopivan ylhäältä alas*/
@@ -45,17 +43,26 @@ let achievements = [
 
 
 function saveValue(value) {
-    cachedInteger = value
+    cached.lastSavedInteger = value
     currentInteger = value
+    if (value > cached.highestAchievedInteger) {
+        cached.highestAchievedInteger = value
+    }
     fs.writeFile(
         "./count_up/data.json",
-        JSON.stringify({ lastSavedInteger: value }),
+        JSON.stringify(cached),
         function (err) {
             if (err) {
                 return console.info(err);
             }
         }
     );
+}
+
+function saveHighestAchievedNumber(value, destination) {
+    destination.edit({
+        topic: 'Huikeat #laskuri saavutukset. Korkein saavutettu numero on ' + value
+    })
 }
 
 function notifyFromAchievement(achievementMessage, destination) {
@@ -114,16 +121,22 @@ specialMessages.on('countingGameMessage', ({ message, client }) => {
         notifyFromAchievement(congratulationsMessage, destination)
     }
 
+    if (sentInteger > cached.highestAchievedInteger) {
+        let destination = guild.channels.cache.get(achievementChannel);
+        saveHighestAchievedNumber(sentInteger, destination)
+    }
+
     while (previousUsers.length > userBuffer) {
         previousUsers.pop()
     }
 
-    if (cachedInteger !== currentInteger) {
+    if (cached.lastSavedInteger !== currentInteger) {
         saveValue(currentInteger)
     }
 });
 
 module.exports = {
     current: () => currentInteger,
-    cachedInteger: () => cachedInteger
+    cachedInteger: () => cached.lastSavedInteger,
+    highestAchievedInteger: () => cached.highestAchievedInteger
 }

@@ -1,14 +1,14 @@
 {
     "DISCORD": {
-        "PREFIX": "/",
+        "PREFIX": "-",
         "ID_MAP": {
             "GUILD": "206518503144947712",
             "CHANNELS": {
                 "CURRENT_PLAYERS_ON_MINECRAFT_SERVER": "726867745328595005",
                 "ALL_PLAYERS_ON_DISCORD": "726867540134854767",
                 "TWITCH_NOTIFICATIONS": "749599869609574462",
-                "COUNT_UP_GAME": "785163774868586517",
-                "COUNT_UP_ACHIEVEMENTS": "785163776797835265"
+                "COUNT_UP_GAME": "749663615547605142",
+                "COUNT_UP_ACHIEVEMENTS": "749663615547605142"
             }
         }
     },

@@ -8,7 +8,6 @@ let prefix = configuration.DISCORD.PREFIX
 
 let countingChannelId = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
 
-
 let specialMessages = new EventEmitter();
 
 module.exports = {
