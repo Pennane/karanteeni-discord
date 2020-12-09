@@ -18,6 +18,8 @@ const twitchEmitter = require('./twitch_integration/twitch.js')
 const twitchNotifier = require('./twitch_integration/notify.js')
 const { cachedInteger } = require('./count_up/index.js')
 
+let DEBUG_REACT_COUNT = 0;
+
 // Caches required messages for automated role updating from reactions
 function cacheRequiredMessages() {
     return new Promise((resolve, reject) => {
@@ -81,15 +83,17 @@ function updateAutomatedRoles() {
 
             if (!reactedUsers) return;
 
+            let roleName = listener.role.name;
+
+            let role = guild.roles.cache.find(role => role.name === roleName)
+
+            if (!role) return console.log(chalk.red("Missing role '" + roleName + "'"))
+
+            let memberCache = guild.members.cache;
+
             reactedUsers.forEach(user => {
-                let member = guild.members.cache.get(user.id)
+                let member = memberCache.get(user.id)
                 if (!member) return;
-
-                let roleName = listener.role.name;
-
-                let role = guild.roles.cache.find(role => role.name === roleName)
-
-                if (!role) return console.log(chalk.red("Missing role '" + roleName + "'"))
 
                 if (member.roles.cache.find(role => role.name === roleName)) return;
 
@@ -110,6 +114,14 @@ function parseReaction(reaction) {
 
     if (!reactionListener) return;
 
+    if (reactionListener.name === "rulesReadRole") {
+        let reactCount = reaction.count;
+        if (reactCount > DEBUG_REACT_COUNT + 1 && DEBUG_REACT_COUNT !== 0) {
+            console.err('bot has missed a react, who knows why')
+        }
+        DEBUG_REACT_COUNT = reactCount
+    }
+
     const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
 
     let member = guild.member(reaction.user);
@@ -121,6 +133,17 @@ function parseReaction(reaction) {
     } else if (reactionListener.role.removable && reaction.type === "REMOVE") {
         toggleRole(member, reactionListener.role.name, "REMOVE")
     }
+}
+
+function loadCachedNumberGame() {
+    return new Promise(async (resolve, reject) => {
+        const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+        const channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
+        channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`').then(message => {
+            channel.send(cachedInteger())
+        }).catch(err => console.log(err))
+        resolve()
+    })
 }
 
 
@@ -139,17 +162,6 @@ twitchEmitter.on('streamChange', (data) => {
         destination: channel
     })
 })
-
-function loadCachedNumberGame() {
-    return new Promise(async (resolve, reject) => {
-        const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
-        const channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
-        channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`').then(message => {
-            channel.send(cachedInteger())
-        }).catch(err => console.log(err))
-        resolve()
-    })
-}
 
 client.on('ready', async () => {
     const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
@@ -172,7 +184,7 @@ client.on('ready', async () => {
     });
 
     // Check that the bot has given necessary roles every hour
-    let rolesUptodateScheduler = schedule.scheduleJob('* */1 * * *', () => {
+    let rolesUptodateScheduler = schedule.scheduleJob('* */2 * * *', () => {
         updateAutomatedRoles()
     });
 
