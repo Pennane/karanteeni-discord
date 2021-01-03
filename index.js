@@ -215,6 +215,11 @@ client.on("messageReactionAdd", (reaction, user) => {
 })
 
 // Sends removed reactions to be handled
+client.on("guildMemberAdd", (member) => {
+    if (member.user.bot) return;
+    toggleRole(member, 'Pelaaja', 'ADD')
+})
+
 client.on("messageReactionRemove", (reaction, user) => {
     if (user.bot) return;
     parseReaction({
