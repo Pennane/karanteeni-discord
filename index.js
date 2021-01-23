@@ -18,15 +18,13 @@ const twitchEmitter = require('./twitch_integration/twitch.js')
 const twitchNotifier = require('./twitch_integration/notify.js')
 const { cachedInteger } = require('./count_up/index.js')
 
-let DEBUG_REACT_COUNT = 0;
-
 // Caches required messages for automated role updating from reactions
 function cacheRequiredMessages() {
     return new Promise((resolve, reject) => {
         let promises = []
 
         reactionListeners.forEach(listener => {
-            let channel = client.channels.cache.get(listener.location.channel)
+            let channel = client.channels.fetch(listener.location.channel)
             let promise = channel.messages.fetch(listener.location.message)
                 .catch(error => console.log('failed to cache required messages', error));
             promises.push(promise)
@@ -46,7 +44,7 @@ function toggleRole(member, roleName, type) {
 
     let role = guild.roles.cache.find(role => role.name === roleName)
 
-    if (!role) throw new Error("Main guild does not have a role named '" + roleName + "'")
+    if (!role) return console.error("Main guild does not have a role named '" + roleName + "'")
 
     if (type === "ADD") {
         member.roles.add(role);
@@ -57,15 +55,15 @@ function toggleRole(member, roleName, type) {
 
 function updateAutomatedRoles() {
     return new Promise(async (resolve, reject) => {
-        const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+        const guild = client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
         if (!guild) throw new Error("Client has an invalid MAIN_GUILD_ID")
 
         reactionListeners.forEach(async listener => {
-            let channel = guild.channels.cache.get(listener.location.channel)
+            let channel = client.channels.fetch(listener.location.channel)
             if (!channel) return console.log(chalk.red(listener.name + " uses a channel that does not exist in MAIN GUILD"))
 
-            let message = channel.messages.cache.get(listener.location.message)
+            let message = channel.messages.fetch(listener.location.message)
             if (!message) return console.log(chalk.red(listener.name + " uses a message id that can not be found"))
 
             let reactionCache = message.reactions.cache.get(listener.emoji.id || listener.emoji.name)
@@ -114,15 +112,7 @@ function parseReaction(reaction) {
 
     if (!reactionListener) return;
 
-    if (reactionListener.name === "rulesReadRole") {
-        let reactCount = reaction.count;
-        if (reactCount > DEBUG_REACT_COUNT + 1 && DEBUG_REACT_COUNT !== 0) {
-            console.err('bot has missed a react, who knows why')
-        }
-        DEBUG_REACT_COUNT = reactCount
-    }
-
-    const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+    const guild = client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
     let member = guild.member(reaction.user);
 
@@ -137,11 +127,13 @@ function parseReaction(reaction) {
 
 function loadCachedNumberGame() {
     return new Promise(async (resolve, reject) => {
-        const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
-        const channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
-        channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`').then(message => {
-            channel.send(cachedInteger())
-        }).catch(err => console.log(err))
+        const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
+        const channel = client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
+        channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
+            .then(message => {
+                channel.send(cachedInteger())
+            })
+            .catch(err => console.log(err))
         resolve()
     })
 }
@@ -151,9 +143,9 @@ twitchEmitter.on('streamChange', (data) => {
     if (!data || !data.user) return;
     if (data.type !== "online") return;
 
-    const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+    const guild = client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
-    let channel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.TWITCH_NOTIFICATIONS)
+    let channel = client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.TWITCH_NOTIFICATIONS)
     let role = guild.roles.cache.find(role => role.name === "Twitch")
 
     twitchNotifier.notify({
@@ -164,7 +156,7 @@ twitchEmitter.on('streamChange', (data) => {
 })
 
 client.on('ready', async () => {
-    const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+    const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
     // Cache messages required for updating roles
     await cacheRequiredMessages()

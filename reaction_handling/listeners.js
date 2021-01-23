@@ -1,21 +1,5 @@
 module.exports = [
     {
-        "name": "rulesReadRole",
-        "emoji": {
-            "name": "✅",
-            "id": null,
-            "custom": false
-        },
-        "location": {
-            "channel": "726876806661013584",
-            "message": "726879559986839685"
-        },
-        "role": {
-            "name": "Pelaaja",
-            "removable": false
-        }
-    },
-    {
         "name": "notificationsRole",
         "emoji": {
             "name": "❗",

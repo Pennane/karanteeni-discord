@@ -21,7 +21,7 @@ function addRole(member, role) {
 
 
 client.on('ready', async () => {
-    const guild = await client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
+    const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
     const role = guild.roles.cache.find(role => role.name === "Pelaaja")
 
     console.log(guild.memberCount, guild.members.cache.size)
