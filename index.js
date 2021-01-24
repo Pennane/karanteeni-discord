@@ -19,7 +19,6 @@ const { cachedInteger } = require('./count_up/index.js')
 
 // Caches required messages for automated role updating from reactions
 function cacheRequiredMessages() {
-<<<<<<< HEAD
     return new Promise(async (resolve, reject) => {
         try {
             for (listener of reactionListeners) {
@@ -31,21 +30,6 @@ function cacheRequiredMessages() {
         } finally {
             resolve()
         }
-=======
-    return new Promise((resolve, reject) => {
-        let promises = []
-
-        reactionListeners.forEach(listener => {
-            let channel = client.channels.fetch(listener.location.channel)
-            let promise = channel.messages.fetch(listener.location.message)
-                .catch(error => console.log('failed to cache required messages', error));
-            promises.push(promise)
-        })
-
-        Promise.all(promises)
-            .then(() => resolve())
-            .catch(error => console.log('failed to cache required messages', error));
->>>>>>> ef400f93a804bc33d40667a0ee0e50c2af3414a3
     })
 }
 
@@ -67,15 +51,10 @@ function toggleRole(member, roleName, type) {
 
 function updateAutomatedRoles() {
     return new Promise(async (resolve, reject) => {
-<<<<<<< HEAD
         const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
-=======
-        const guild = client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
->>>>>>> ef400f93a804bc33d40667a0ee0e50c2af3414a3
 
         if (!guild) throw new Error('Client has an invalid MAIN_GUILD_ID')
 
-<<<<<<< HEAD
         reactionListeners.forEach(async (listener) => {
             let channel = await client.channels.fetch(listener.location.channel)
             if (!channel)
@@ -83,14 +62,6 @@ function updateAutomatedRoles() {
 
             let message = await channel.messages.fetch(listener.location.message)
             if (!message) return console.log(chalk.red(listener.name + ' uses a message id that can not be found'))
-=======
-        reactionListeners.forEach(async listener => {
-            let channel = client.channels.fetch(listener.location.channel)
-            if (!channel) return console.log(chalk.red(listener.name + " uses a channel that does not exist in MAIN GUILD"))
-
-            let message = channel.messages.fetch(listener.location.message)
-            if (!message) return console.log(chalk.red(listener.name + " uses a message id that can not be found"))
->>>>>>> ef400f93a804bc33d40667a0ee0e50c2af3414a3
 
             let reactionCache = message.reactions.cache.get(listener.emoji.id || listener.emoji.name)
 
@@ -141,13 +112,9 @@ async function parseReaction(reaction) {
 
     if (!reactionListener) return
 
-<<<<<<< HEAD
     const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
     let member = guild.member(reaction.user)
-=======
-    const guild = client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
->>>>>>> ef400f93a804bc33d40667a0ee0e50c2af3414a3
 
     if (!member) return
 
@@ -160,7 +127,6 @@ async function parseReaction(reaction) {
 
 function displayCachedNumberGame() {
     return new Promise(async (resolve, reject) => {
-<<<<<<< HEAD
         try {
             const channel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
             await channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
@@ -170,16 +136,6 @@ function displayCachedNumberGame() {
         } finally {
             resolve()
         }
-=======
-        const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
-        const channel = client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
-        channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
-            .then(message => {
-                channel.send(cachedInteger())
-            })
-            .catch(err => console.log(err))
-        resolve()
->>>>>>> ef400f93a804bc33d40667a0ee0e50c2af3414a3
     })
 }
 
