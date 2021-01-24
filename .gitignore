@@ -1,3 +1,4 @@
 authorize.json
 node_modules
 .DS_Store
+count_up/data.json
