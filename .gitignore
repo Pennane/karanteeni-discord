@@ -1,3 +1,6 @@
 authorize.json
 node_modules
+count_up/data.json
+count_up/test_data.json
 .DS_Store
+.env

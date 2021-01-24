@@ -1,4 +1,4 @@
-const configuration = require('../configuration.json')
+const configuration = require('../util/config')
 
 function isObject(o) {
     return typeof o === 'object' && o !== null
@@ -9,7 +9,7 @@ function isArray(a) {
 }
 
 function isFunction(f) {
-    return typeof f === "function"
+    return typeof f === 'function'
 }
 
 const commandTypes = [
@@ -34,13 +34,13 @@ const commandTypes = [
         emoji: ':crown:'
     },
     {
-        name: "muut",
-        description: "Muita komentoja",
+        name: 'muut',
+        description: 'Muita komentoja',
         emoji: ':grey_question:'
     }
 ]
 
-const typeNames = commandTypes.map(type => type.name);
+const typeNames = commandTypes.map((type) => type.name)
 
 class Command {
     constructor({ configuration, executor }, filename) {
@@ -56,16 +56,16 @@ class Command {
 
         let types = []
         if (configuration.type) {
-            configuration.type.forEach(type => {
+            configuration.type.forEach((type) => {
                 if (typeNames.indexOf(type.toLowerCase()) !== -1) {
                     types.push(type.toLowerCase())
                 }
-            });
+            })
         }
-        this.type = types.length === 0 ? ["other"] : types;
+        this.type = types.length === 0 ? ['other'] : types
         if (configuration.hidden) {
-            this.type = ["hidden"]
-            this.hidden = true;
+            this.type = ['hidden']
+            this.hidden = true
         }
         this.name = configuration.name
         this.description = configuration.desc
@@ -75,12 +75,11 @@ class Command {
         this.superAdminCommand = configuration.superadmin
         this.executor = executor
 
-        this.requireGuild = typeof configuration.requireGuild === "boolean" ? configuration.requireGuild : true;
+        this.requireGuild = typeof configuration.requireGuild === 'boolean' ? configuration.requireGuild : true
 
         if (this.adminCommand && this.type.indexOf('admin') === -1) {
             this.type.push('admin')
         }
-
     }
 
     static commandTypes() {
@@ -93,21 +92,19 @@ class Command {
         } else {
             const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
             const member = guild.member(message.author)
-            
+
             return member.hasPermission('ADMINISTRATOR')
         }
-        
-       
     }
 
     unauthorizedAction(message) {
-        message.reply("Sinulla ei ole oikeutta käyttää komentoa " + this.name)
+        message.reply('Sinulla ei ole oikeutta käyttää komentoa ' + this.name)
     }
 
     execute(message, client, args) {
-        if (this.requireGuild && !message.guild) return;
+        if (this.requireGuild && !message.guild) return
 
-        let adminAuthorization = false;
+        let adminAuthorization = false
 
         if (this.adminCommand) {
             adminAuthorization = Command.isMemberAdminAuthorized(message, client)
@@ -117,10 +114,8 @@ class Command {
             return this.unauthorizedAction(message)
         }
 
-        this.executor(message, client, args)
-            .catch(err => console.info(err))
+        this.executor(message, client, args).catch((err) => console.info(err))
     }
-
 }
 
-module.exports = Command;
+module.exports = Command

@@ -1,14 +1,14 @@
-const configuration = require('../configuration.json')
+const configuration = require('../util/config')
 
-let { commands, triggers } = require('../commands/loader.js').loaded();
+let { commands, triggers } = require('../commands/loader.js').loaded()
 
-const { EventEmitter } = require('events');
+const { EventEmitter } = require('events')
 
-let prefix = configuration.DISCORD.PREFIX
+let prefix = configuration.PREFIX
 
 let countingChannelId = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
 
-let specialMessages = new EventEmitter();
+let specialMessages = new EventEmitter()
 
 module.exports = {
     specialMessages,
@@ -32,17 +32,16 @@ module.exports = {
             return
         }
 
-        if (!hasPrefix) return;
+        if (!hasPrefix) return
 
         let args = message.content.trim().substr(prefix.length).split(' ')
 
         let trigger = args[0].toLowerCase()
 
-        if (!triggers.hasOwnProperty(trigger)) return;
+        if (!triggers.hasOwnProperty(trigger)) return
 
         let command = commands.get(triggers[trigger])
 
         command.execute(message, client, args)
-
     }
-} 
+}
