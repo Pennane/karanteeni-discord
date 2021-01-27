@@ -11,6 +11,12 @@ let specialMessages = new EventEmitter()
 module.exports = {
     specialMessages,
     parse: function (message, client) {
+        if (message.channel.id === configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME) {
+            return specialMessages.emit('countingGameMessage', {
+                message,
+                client
+            })
+        }
         let hasPrefix = message.content.startsWith(prefix)
 
         if (!hasPrefix && message.content.includes('bad bot')) {

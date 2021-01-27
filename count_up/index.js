@@ -72,9 +72,11 @@ function notifyFromAchievement(achievementMessage, destination) {
     destination.send(achievementMessage)
 }
 
-function checkAchievements(currentInteger) {
+function checkAchievements(int) {
     if (currentInteger < 1) return undefined
-    return achievements.find((achievementItem) => achievementItem[0](currentInteger))
+    return achievements.find((achievement) => {
+        return achievement[0](int)
+    })
 }
 
 specialMessages.on('countingGameMessage', ({ message, client }) => {
