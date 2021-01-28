@@ -9,7 +9,7 @@
   "main": "index.js",
   "scripts": {
     "start": "cross-env NODE_ENV=production node index.js",
-    "dev": "cross-env NODE_ENV=development nodemon index.js"
+    "dev": "NODE_OPTIONS='--trace-warnings' cross-env NODE_ENV=development nodemon index.js"
   },
   "author": "Arttu Pennanen <arttuinthewoods@gmail.com>",
   "license": "ISC",
@@ -26,5 +26,11 @@
   "devDependencies": {
     "cross-env": "^7.0.3",
     "nodemon": "^2.0.7"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "*.json",
+      "node_modules"
+    ]
   }
 }

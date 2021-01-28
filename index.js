@@ -15,23 +15,14 @@ const reactionListeners = require('./reaction_handling/listeners.js')
 const messageHandler = require('./message_handling/handler.js')
 const twitchEmitter = require('./twitch_integration/twitch.js')
 const twitchNotifier = require('./twitch_integration/notify.js')
-const { cachedInteger } = require('./count_up/index.js')
+const {
+    cachedInteger,
+    initializeGame,
+    parseCountingGameMessageEdit,
+    parseCountingGameMessageDelete
+} = require('./count_up/index.js')
 
-// Caches required messages for automated role updating from reactions
-function cacheRequiredMessages() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            for (listener of reactionListeners) {
-                let channel = await client.channels.fetch(listener.location.channel)
-                let promise = await channel.messages.fetch(listener.location.message)
-            }
-        } catch (exception) {
-            console.log(exception)
-        } finally {
-            resolve()
-        }
-    })
-}
+const countingGameChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
 
 function toggleRole(member, roleName, type) {
     let guild = member.guild
@@ -58,10 +49,10 @@ function updateAutomatedRoles() {
         reactionListeners.forEach(async (listener) => {
             let channel = await client.channels.fetch(listener.location.channel)
             if (!channel)
-                return console.log(chalk.red(listener.name + ' uses a channel that does not exist in MAIN GUILD'))
+                return console.info(chalk.red(listener.name + ' uses a channel that does not exist in MAIN GUILD'))
 
             let message = await channel.messages.fetch(listener.location.message)
-            if (!message) return console.log(chalk.red(listener.name + ' uses a message id that can not be found'))
+            if (!message) return console.info(chalk.red(listener.name + ' uses a message id that can not be found'))
 
             let reactionCache = message.reactions.cache.get(listener.emoji.id || listener.emoji.name)
 
@@ -82,7 +73,7 @@ function updateAutomatedRoles() {
 
             let role = guild.roles.cache.find((role) => role.name === roleName)
 
-            if (!role) return console.log(chalk.red("Missing role '" + roleName + "'"))
+            if (!role) return console.info(chalk.red("Missing role '" + roleName + "'"))
 
             let memberCache = guild.members.cache
 
@@ -132,7 +123,7 @@ function displayCachedNumberGame() {
             await channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
             await channel.send(cachedInteger())
         } catch (exception) {
-            console.log(exception)
+            console.info(exception)
         } finally {
             resolve()
         }
@@ -158,18 +149,21 @@ twitchEmitter.on('streamChange', async (data) => {
 client.on('ready', async () => {
     const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
-    // Cache messages required for updating roles
-    await cacheRequiredMessages()
-
-    // Send cached number from the number game
-    if (process.env.NODE_ENV === 'production') {
-        await displayCachedNumberGame()
-    }
     // Update server status
     await serverStatus.update(guild)
 
     // Add missing roles
     await updateAutomatedRoles()
+
+    // Start the counting game
+    try {
+        await initializeGame(client)
+        if (true || process.env.NODE_ENV === 'production') {
+            displayCachedNumberGame()
+        }
+    } catch (exception) {
+        console.error(exception)
+    }
 
     // Update the info channel names in discord every 10 minutes
     let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
@@ -181,11 +175,13 @@ client.on('ready', async () => {
         updateAutomatedRoles()
     })
 
-    console.log(chalk.blue('//// Botti virallisesti hereillä.'))
-    console.log(chalk.blue('//// Käynnistyminen kesti'), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
-    console.log(chalk.blue('//// Discord serverillä yhteensä', chalk.yellow(guild.memberCount), chalk.blue('pelaajaa')))
+    console.info(chalk.blue('//// Botti virallisesti hereillä.'))
+    console.info(chalk.blue('//// Käynnistyminen kesti'), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
+    console.info(
+        chalk.blue('//// Discord serverillä yhteensä', chalk.yellow(guild.memberCount), chalk.blue('pelaajaa'))
+    )
     if (serverStatus.cached()) {
-        console.log(
+        console.info(
             chalk.blue(
                 '//// Minecraftissa tällä hetkellä',
                 chalk.yellow(serverStatus.cached().players.online),
@@ -193,7 +189,7 @@ client.on('ready', async () => {
             )
         )
     } else {
-        console.log(chalk.red('//// Minecraft palvelin tuntuisi olevan pois päältä.'))
+        console.info(chalk.red('//// Minecraft palvelin tuntuisi olevan pois päältä.'))
     }
 })
 
@@ -201,6 +197,19 @@ client.on('message', async (message) => {
     const ignoreMessage = message.author.bot
     if (ignoreMessage) return
     messageHandler.parse(message, client)
+})
+
+client.on('messageUpdate', (oldMessage, newMessage) => {
+    console.log(newMessage.content)
+    if (newMessage.channel.id === countingGameChannel) {
+        parseCountingGameMessageEdit(oldMessage, newMessage)
+    }
+})
+
+client.on('messageDelete', (message) => {
+    if (message.channel.id === countingGameChannel) {
+        parseCountingGameMessageDelete(message)
+    }
 })
 
 // Sends added reactions to be handled
@@ -228,14 +237,14 @@ client.on('messageReactionRemove', (reaction, user) => {
     })
 })
 
-client.on('reconnecting', () => console.log('BOT RECONNECTING'))
+client.on('reconnecting', () => console.info('BOT RECONNECTING'))
 
-client.on('resume', () => console.log('BOT RESUMED SUCCESFULLY'))
+client.on('resume', () => console.info('BOT RESUMED SUCCESFULLY'))
 
-client.on('error', (err) => console.log('ERROR ON CLIENT:', err))
+client.on('error', (err) => console.info('ERROR ON CLIENT:', err))
 
 client.on('warn', (warn) => console.warn(warn))
 
-process.on('uncaughtException', (err) => console.log('UNCAUGHT EXCEPTION ON PROCESS:', err))
+process.on('uncaughtException', (err) => console.info('UNCAUGHT EXCEPTION ON PROCESS:', err))
 
 client.login(configuration.DISCORD.TOKEN)

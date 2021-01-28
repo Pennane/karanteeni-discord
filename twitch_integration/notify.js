@@ -1,17 +1,17 @@
 const Discord = require('discord.js')
 
 function notifyRole(notifyRequest) {
-    let { streamChange, notifyRole, destination } = notifyRequest;
+    let { streamChange, notifyRole, destination } = notifyRequest
 
-    console.log(streamChange)
+    console.info(streamChange)
 
     let embed = new Discord.MessageEmbed()
-    let thumbnailUrl = streamChange.thumbnail;
-    let streamUrl = `https://www.twitch.tv/${streamChange.user}`;
+    let thumbnailUrl = streamChange.thumbnail
+    let streamUrl = `https://www.twitch.tv/${streamChange.user}`
 
     if (thumbnailUrl) {
-        thumbnailUrl = thumbnailUrl.replace('{width}', "1920")
-        thumbnailUrl = thumbnailUrl.replace('{height}', "1080")
+        thumbnailUrl = thumbnailUrl.replace('{width}', '1920')
+        thumbnailUrl = thumbnailUrl.replace('{height}', '1080')
     }
 
     embed
@@ -31,7 +31,7 @@ function notifyRole(notifyRequest) {
     let message = new Discord.APIMessage(destination, {
         content: `[ <@&${notifyRole.id}> ]`,
         embed: embed
-    });
+    })
 
     destination.send(message)
 }

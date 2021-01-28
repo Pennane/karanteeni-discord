@@ -1,150 +1,159 @@
-const Discord = require('discord.js')
+const configuration = require('../util/config')
 const fs = require('fs')
-
-let configuration = require('../util/config')
-let achievementChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_ACHIEVEMENTS
+const Discord = require('discord.js')
 
 const { ValueReturner } = require('../commands/command_files/returnvalue.js')
 const { specialMessages } = require('../message_handling/handler.js')
 
-let dataLocation = configuration.COUNTING_GAME.DATA_LOCATION
+const {
+    pushHighestAchievedNumber,
+    sendCountingStartsAtOne,
+    sendResetMessage,
+    findAndGiveAchievements
+} = require('./util')
 
-if (!fs.existsSync(dataLocation)) {
-    fs.writeFileSync(dataLocation, '{"lastSavedInteger": 0, "highestAchievedInteger": 0}')
-}
+let cache
+let currentNumber = 0
+let maxUserBufferLength = 2
+let userBuffer = []
 
-let cached = JSON.parse(fs.readFileSync(dataLocation, 'utf8'))
-
-let currentInteger = 0
-
-if (cached.lastSavedInteger) {
-    currentInteger = cached.lastSavedInteger
-}
-let previousUsers = []
-
-let userBuffer = 2
-
-ValueReturner.on('returnedValue', (value) => {
-    saveValue(value)
-})
-
-/* Valitsee ensimmäisen sopivan ylhäältä alas*/
-let achievements = [
-    //  [(current) => current === 69, (current, message) => 'Nice, ' + "<@" + message.author.id + ">" + ''],
-    [(current) => current === 300, (current, message) => '<@' + message.author.id + '> saavutti luvun ' + current],
-    [(current) => current === 420, (current, message) => '420 korvenna sitä ' + '<@' + message.author.id + '>'],
-    [(current) => current === 6969, (current, message) => 'Ultra nice <@' + message.author.id + '> 6969'],
-    [(current) => current === 7500, (current, message) => '<@' + message.author.id + '> saavutti luvun ' + current],
-    [
-        (current) => current % 500 === 0 && current <= 3000,
-        (current, message) => '<@' + message.author.id + '>' + ' saavutti luvun ' + current
-    ],
-    [
-        (current) => current % 1000 === 0 && current > 3000 && current <= 6000,
-        (current, message) => '<@' + message.author.id + '>' + ' saavutti luvun ' + current
-    ],
-    [
-        (current) => current % 2500 === 0 && current > 6000,
-        (current, message) => '<@' + message.author.id + '>' + ' saavutti luvun ' + current
-    ]
-]
-
-function saveValue(value) {
-    cached.lastSavedInteger = value
-    currentInteger = value
-    if (value > cached.highestAchievedInteger) {
-        cached.highestAchievedInteger = value
+const initializeData = () => {
+    let dataLocation = configuration.COUNTING_GAME.DATA_LOCATION
+    if (!fs.existsSync(dataLocation)) {
+        fs.writeFileSync(dataLocation, '{"lastSavedInteger": 0, "highestAchievedInteger": 0}')
     }
-    fs.writeFile(dataLocation, JSON.stringify(cached), function (err) {
+
+    cache = JSON.parse(fs.readFileSync(dataLocation, 'utf8'))
+
+    if (cache.lastSavedInteger) {
+        currentNumber = cache.lastSavedInteger
+    }
+}
+
+initializeData()
+
+const resetGame = (member, customMessage, destination, messageHandledAlready) => {
+    if (!messageHandledAlready) {
+        sendResetMessage(destination, member, customMessage)
+    }
+    currentNumber = 0
+    userBuffer = []
+}
+
+const saveValue = (value) => {
+    cache.lastSavedInteger = value
+    currentNumber = value
+    if (value > cache.highestAchievedInteger) {
+        cache.highestAchievedInteger = value
+    }
+    fs.writeFile(configuration.COUNTING_GAME.DATA_LOCATION, JSON.stringify(cache), function (err) {
         if (err) {
             return console.info(err)
         }
     })
 }
 
-function saveHighestAchievedNumber(value, destination) {
-    destination.edit({
-        topic: 'Huikeat #laskuri saavutukset. Korkein saavutettu numero on ' + value
-    })
+const handleMessageEdit = (oldMessage, newMessage) => {
+    if (newMessage.author.bot || currentNumber === 0) return
+
+    let oldInteger = parseInt(oldMessage.content)
+    let newInteger = parseInt(newMessage.content)
+    if (!oldInteger || oldInteger > currentNumber || oldInteger === newInteger) return
+    let embed = new Discord.MessageEmbed()
+        .setColor(0xf44242)
+        .setTitle('Takas nollaan että läsähti!')
+        .setDescription(`<@${newMessage.member.user.id}> vaihtoi viestin arvoa.`)
+        .addField('Vanha arvo:', oldInteger, true)
+        .addField('Uusi arvo:', newInteger, true)
+    newMessage.channel.send(embed)
+    resetGame(newMessage.member, null, null, true)
+    saveValue(0)
 }
 
-function notifyFromAchievement(achievementMessage, destination) {
-    destination.send(achievementMessage)
+const handleMessageDelete = (message) => {
+    if (message.author.bot || currentNumber === 0) return
+    let removedInteger = parseInt(message.content)
+    if (!removedInteger || removedInteger > currentNumber || removedInteger < currentNumber - 3) return
+
+    let embed = new Discord.MessageEmbed()
+        .setColor(0xf44242)
+        .setTitle('Takas nollaan että läsähti!')
+        .setDescription(`<@${message.member.user.id}> poisti liian uuden viestin.`)
+        .addField('Poistettu arvo oli:', removedInteger, true)
+    message.channel.send(embed)
+    resetGame(message.member, null, null, true)
+    saveValue(0)
 }
 
-function checkAchievements(int) {
-    if (currentInteger < 1) return undefined
-    return achievements.find((achievement) => {
-        return achievement[0](int)
-    })
-}
+const execute = (client) => {
+    return new Promise(async (resolve, reject) => {
+        const gameChannel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
+        const achievementChannel = await client.channels.fetch(
+            configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_ACHIEVEMENTS
+        )
 
-specialMessages.on('countingGameMessage', ({ message, client }) => {
-    let embed = new Discord.MessageEmbed().setColor(0xf4e542)
-
-    const guild = client.guilds.cache.get(configuration.DISCORD.ID_MAP.GUILD)
-
-    function backToStart(member, customMessage) {
-        embed.setTitle('Takas nollaan että läsähti!').setDescription('<@' + member.id + '> teki jotain hirveää')
-        if (customMessage) {
-            embed.addField('huomio huomio', customMessage)
+        if (!gameChannel || !achievementChannel) {
+            return reject(new Error('Missing required DISCORD content'))
         }
-        channel.send(embed)
-        currentInteger = 0
-        previousUsers = []
-    }
 
-    let content = message.content
-    let channel = message.channel
-    let member = message.member
-    let sentInteger = parseInt(content)
+        const handleGameMessage = ({ message }) => {
+            let { content, channel, member } = message
+            let sentInteger = parseInt(content)
 
-    if (currentInteger === 0 && sentInteger !== 1 && !isNaN(sentInteger)) {
-        embed.setTitle('huomioikaa dumbot: se laskeminen alkaa ykkösestä')
-        message.delete({ timeout: 7000 })
-        channel
-            .send(embed)
-            .then((message) => message.delete({ timeout: 8000 }))
-            .catch((err) => console.log(err))
-    }
+            if (currentNumber === 0 && sentInteger !== 1 && !isNaN(sentInteger)) {
+                sendCountingStartsAtOne(channel, message)
+            }
 
-    if (!message.member.hasPermission('ADMINISTRATOR') && isNaN(sentInteger)) {
-        message.delete()
-        backToStart(member, 'pelkkiä lukuja chattiin')
-    } else if (previousUsers.indexOf(member.id) !== -1 && currentInteger !== 0) {
-        backToStart(member, 'anna vähintään ' + userBuffer + ' pelaajan nostaa lukua ensin')
-    } else if (sentInteger !== currentInteger + 1 && currentInteger > 1) {
-        backToStart(member)
-    } else if (sentInteger === currentInteger + 1 && previousUsers.indexOf(member.id) === -1) {
-        currentInteger++
-        previousUsers.unshift(member.id)
-    }
+            if (!message.member.hasPermission('ADMINISTRATOR') && isNaN(sentInteger)) {
+                /* Sent message did not start with number */
+                message.delete()
+                resetGame(member, 'pelkkiä lukuja chattiin', channel)
+            } else if (userBuffer.indexOf(member.id) !== -1 && currentNumber !== 0) {
+                /* Sent message was from user in userbuffer */
+                resetGame(member, `anna vähintään ${maxUserBufferLength} pelaajan nostaa lukua ensin`, channel)
+            } else if (sentInteger !== currentNumber + 1 && currentNumber > 1) {
+                /* Sent message had wrong next number */
+                resetGame(member, null, channel)
+            } else if (sentInteger === currentNumber + 1 && userBuffer.indexOf(member.id) === -1) {
+                /* SENT MESSAGE WAS CORRECT FOR ONCE*/
+                currentNumber++
+                userBuffer.unshift(member.id)
+            }
 
-    let achievement = checkAchievements(currentInteger, message)
+            /* Find possible achievements and update achievement channel */
+            findAndGiveAchievements(currentNumber, message, achievementChannel)
 
-    if (achievement) {
-        let destination = guild.channels.cache.get(achievementChannel)
-        let congratulationsMessage = achievement[1](currentInteger, message)
-        message.react('🎉')
-        notifyFromAchievement(congratulationsMessage, destination)
-    }
+            if (sentInteger > cache.highestAchievedInteger) {
+                /* Save highest achieved number to achievement channel in discord */
+                pushHighestAchievedNumber(sentInteger, achievementChannel)
+            }
 
-    if (sentInteger > cached.highestAchievedInteger) {
-        let destination = guild.channels.cache.get(achievementChannel)
-        saveHighestAchievedNumber(sentInteger, destination)
-    }
+            if (cache.lastSavedInteger !== currentNumber) {
+                saveValue(currentNumber)
+            }
 
-    while (previousUsers.length > userBuffer) {
-        previousUsers.pop()
-    }
+            /* Reduce userbuffer to max length */
+            while (userBuffer.length > maxUserBufferLength) {
+                userBuffer.pop()
+            }
+        }
 
-    if (cached.lastSavedInteger !== currentInteger) {
-        saveValue(currentInteger)
-    }
-})
+        specialMessages.on('countingGameMessage', handleGameMessage)
+
+        ValueReturner.on('returnedValue', (value) => {
+            saveValue(value)
+            userBuffer = []
+        })
+
+        resolve()
+    })
+}
 
 module.exports = {
-    current: () => currentInteger,
-    cachedInteger: () => cached.lastSavedInteger,
-    highestAchievedInteger: () => cached.highestAchievedInteger
+    current: () => currentNumber,
+    cachedInteger: () => cache.lastSavedInteger,
+    highestAchievedInteger: () => cache.highestAchievedInteger,
+    initializeGame: execute,
+    parseCountingGameMessageEdit: handleMessageEdit,
+    parseCountingGameMessageDelete: handleMessageDelete
 }

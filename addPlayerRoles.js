@@ -14,17 +14,17 @@ function addRole(member, role) {
     if (!member || !role) throw new Error('Missing arguments')
     if (!member.roles.cache.find((role) => role.name === 'Pelaaja')) {
         member.roles.add(role)
-        return console.log(member.user.username + ' received the role.')
+        return console.info(member.user.username + ' received the role.')
     }
 }
 
 client.on('ready', async () => {
     const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
     const role = guild.roles.cache.find((role) => role.name === 'Pelaaja')
-    console.log(guild.memberCount, guild.members.cache.size)
-    console.log('Starting to fetch the guild members. This might take a while....')
+    console.info(guild.memberCount, guild.members.cache.size)
+    console.info('Starting to fetch the guild members. This might take a while....')
     let members = await guild.members.fetch()
-    console.log('Fetched members. Amount of fetched members: ', [...members.values()].length)
+    console.info('Fetched members. Amount of fetched members: ', [...members.values()].length)
     members.forEach((member) => {
         addRole(member, role)
     })

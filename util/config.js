@@ -17,7 +17,8 @@ let DISCORD = {
             COUNT_UP_ACHIEVEMENTS: '785163776797835265'
         }
     },
-    TOKEN: process.env.DISCORD_TOKEN
+    TOKEN: process.env.DISCORD_TOKEN,
+    ADMIN: '143097697828601857'
 }
 
 let TWITCH = {

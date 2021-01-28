@@ -36,7 +36,7 @@ module.exports = {
             gameChannel
                 .send('`!!PELIIN ON PALAUTETTU UUSI ARVO! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
                 .then((m) => gameChannel.send(value))
-                .catch((err) => console.log(err))
+                .catch((err) => console.info(err))
             resolve()
         })
     },

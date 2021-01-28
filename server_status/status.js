@@ -22,7 +22,7 @@ function fetchMinecraftServerStatus() {
 
 function updateServerStatus(guild) {
     return new Promise(async (resolve, reject) => {
-        if (!guild || !guild.available) return console.log('Main guild is not available.')
+        if (!guild || !guild.available) return console.info('Main guild is not available.')
 
         let minecraftplayersUpdateChannel = guild.channels.cache.get(
             configuration.DISCORD.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_MINECRAFT_SERVER
@@ -34,7 +34,7 @@ function updateServerStatus(guild) {
         let serverStatus = await fetchMinecraftServerStatus()
 
         if (!minecraftplayersUpdateChannel.editable || !discordusersUpdateChannel.editable) {
-            return console.log('Unable to edit required channels. Aborting.')
+            return console.info('Unable to edit required channels. Aborting.')
         }
 
         if (!cachedMemberCount || guild.memberCount !== cachedMemberCount) {
@@ -42,7 +42,7 @@ function updateServerStatus(guild) {
                 .edit({
                     name: 'Pelaajia discordissa: ' + guild.memberCount
                 })
-                .catch((err) => console.log(err))
+                .catch((err) => console.info(err))
         }
 
         let statusHasPlayercount = serverStatus && serverStatus.players && serverStatus.players.online
@@ -55,14 +55,14 @@ function updateServerStatus(guild) {
                 .edit({
                     name: 'Pelaajia servulla: ?'
                 })
-                .catch((err) => console.log(err))
+                .catch((err) => console.info(err))
         } else if (statusHasPlayercount) {
             if (!cachedStatusHasPlayercount || serverStatus.players.online !== cachedServerStatus.players.online) {
                 minecraftplayersUpdateChannel
                     .edit({
                         name: 'Pelaajia servulla: ' + serverStatus.players.online
                     })
-                    .catch((err) => console.log(err))
+                    .catch((err) => console.info(err))
             }
         } else if (serverStatus.online === false) {
             if (!cachedServerStatus || cachedServerStatus.online !== false) {
@@ -70,7 +70,7 @@ function updateServerStatus(guild) {
                     .edit({
                         name: 'Palvelin poissa päältä'
                     })
-                    .catch((err) => console.log(err))
+                    .catch((err) => console.info(err))
             }
         }
 
