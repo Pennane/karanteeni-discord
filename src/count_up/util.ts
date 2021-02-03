@@ -2,9 +2,11 @@ import achievements from './achievements'
 import Discord from 'discord.js'
 
 export const pushHighestAchievedNumber = (value: number, destination: Discord.TextChannel) => {
-    destination.edit({
-        topic: 'Huikeat #laskuri saavutukset. Korkein saavutettu numero on ' + value
-    })
+    destination
+        .edit({
+            topic: `Huikeat #laskuri saavutukset. Korkein saavutettu numero on ${String(value)}`
+        })
+        .catch(console.error)
 }
 export const notifyFromAchievement = async (achievementMessage: string, destination: Discord.TextChannel) => {
     destination.send(achievementMessage)

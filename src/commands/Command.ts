@@ -108,19 +108,12 @@ class Command {
 
     static async isMemberAdminAuthorized(message: Discord.Message, client: Discord.Client): Promise<boolean> {
         if (message.member) {
-            console.log(11)
             return message.member.hasPermission('ADMINISTRATOR')
         } else {
-            console.log(12)
-
             const guild = client.guilds.cache.get(AppConfiguration.DISCORD.ID_MAP.GUILD)
             if (!guild) throw new Error('Faulty guild id')
             const member = await guild.members.fetch(message.author)
-            console.log(13)
-
             if (!member) return false
-            console.log(14)
-
             return member.hasPermission('ADMINISTRATOR')
         }
     }

@@ -12,7 +12,8 @@ interface CountingGameCache {
     highestAchievedInteger?: number
 }
 
-type UserBuffer = Array<string>
+type UserId = string
+type UserBuffer = Array<UserId>
 
 let cache: CountingGameCache
 let currentNumber = 0
@@ -115,7 +116,6 @@ const execute = async (client: Discord.Client): Promise<void> => {
     const handleGameMessage = (message: Discord.Message) => {
         let { content, channel, member } = message
         let sentInteger = parseInt(content)
-        message.type
 
         if (currentNumber === 0 && sentInteger !== 1 && !isNaN(sentInteger)) {
             sendCountingStartsAtOne(channel as Discord.TextChannel, message)
@@ -139,13 +139,13 @@ const execute = async (client: Discord.Client): Promise<void> => {
             userBuffer.unshift(member.id)
         }
 
-        /* Find possible achievements and update achievement channel */
-        findAndGiveAchievements(currentNumber, message, achievementChannel as Discord.TextChannel)
-
         if (!cache.highestAchievedInteger || sentInteger > cache.highestAchievedInteger) {
             /* Save highest achieved number to achievement channel in discord */
             pushHighestAchievedNumber(sentInteger, achievementChannel as Discord.TextChannel)
         }
+
+        /* Find possible achievements and update achievement channel */
+        findAndGiveAchievements(currentNumber, message, achievementChannel as Discord.TextChannel)
 
         if (cache.lastSavedInteger !== currentNumber) {
             saveValue(currentNumber)

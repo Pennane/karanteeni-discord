@@ -3,122 +3,18 @@ import Discord from 'discord.js'
 import schedule from 'node-schedule'
 import chalk from 'chalk'
 import configuration from './util/config'
+import { toggleRole } from './util/discordutil'
 import serverStatus from './server_status/status'
-import reactionListeners, { ReactionListener } from './reaction_handling/listeners'
+import { handle as handleReaction } from './reaction_handling/index'
 import messageHandler from './message_handling/handler'
 import twitchEmitter from './twitch_integration/twitch'
 import twitchNotifier from './twitch_integration/notify'
 import countingGame from './count_up/index'
 
 let startingDate = Date.now()
-const client = new Discord.Client()
+const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION', 'USER'] })
 
 const countingGameChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
-
-const toggleRole = (member: Discord.GuildMember, roleName: string, type: 'ADD' | 'REMOVE'): void => {
-    let guild = member.guild
-
-    if (configuration.DISCORD.ID_MAP.GUILD !== guild.id) throw new Error('Tried to toggle role for wrong guild')
-
-    let role = guild.roles.cache.find((role) => role.name === roleName)
-
-    if (!role) return console.error("Main guild does not have a role named '" + roleName + "'")
-
-    if (type === 'ADD') {
-        member.roles.add(role)
-    } else if (type === 'REMOVE') {
-        member.roles.remove(role)
-    }
-}
-
-const updateAutomatedRoles = async (): Promise<void> => {
-    const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
-
-    if (!guild) throw new Error('Client has an invalid MAIN_GUILD_ID')
-
-    reactionListeners.forEach(
-        async (listener: ReactionListener): Promise<void> => {
-            let channel = await client.channels.fetch(listener.location.channel)
-            if (!channel)
-                return console.info(chalk.red(listener.name + ' uses a channel that does not exist in MAIN GUILD'))
-
-            if (channel.type !== 'text') throw new Error('Tried to pass a channel that is not a text channel')
-
-            let message = await (channel as Discord.TextChannel).messages.fetch(listener.location.message)
-
-            if (!message) return console.info(chalk.red(listener.name + ' uses a message id that can not be found'))
-
-            let reactionCache = message.reactions.cache.get(listener.emoji.id || listener.emoji.name)
-
-            if (!reactionCache) {
-                message.react(listener.emoji.id || listener.emoji.name)
-                return
-            }
-
-            if (!reactionCache.me) {
-                message.react(listener.emoji.id || listener.emoji.name)
-            }
-
-            let reactedUsers = await reactionCache.users.fetch()
-
-            if (!reactedUsers) return
-
-            let roleName = listener.role.name
-
-            let role = guild.roles.cache.find((role) => role.name === roleName)
-
-            if (!role || role === undefined) return console.info(chalk.red("Missing role '" + roleName + "'"))
-
-            let memberCache = guild.members.cache
-
-            reactedUsers.forEach((user) => {
-                let member = memberCache.get(user.id)
-                if (!member) return
-
-                if (member.roles.cache.find((role) => role.name === roleName)) return
-
-                if (role) {
-                    member.roles.add(role)
-                }
-            })
-        }
-    )
-}
-
-interface ReactionParseInput {
-    reaction: Discord.MessageReaction
-    user: Discord.User
-    type: 'ADD' | 'REMOVE'
-}
-
-const parseReaction = async (parse: ReactionParseInput): Promise<void> => {
-    let reactionListener = reactionListeners.find((listener) => {
-        let correctChannel = listener.location.message === parse.reaction.message.id
-        let correctEmoji =
-            parse.reaction.emoji.id === null
-                ? listener.emoji.name === parse.reaction.emoji.name
-                : listener.emoji.id === parse.reaction.emoji.id
-        return correctChannel && correctEmoji
-    })
-
-    if (!reactionListener) return
-
-    const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
-
-    const user = parse.user
-
-    if (!user) return
-
-    let member = guild.member(user)
-
-    if (!member) return
-
-    if (parse.type === 'ADD') {
-        toggleRole(member, reactionListener.role.name, 'ADD')
-    } else if (reactionListener.role.removable && parse.type === 'REMOVE') {
-        toggleRole(member, reactionListener.role.name, 'REMOVE')
-    }
-}
 
 const displayCachedNumberGame = async (): Promise<void> => {
     try {
@@ -151,7 +47,7 @@ twitchEmitter.on(
         let channel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.TWITCH_NOTIFICATIONS)
         let role = guild.roles.cache.find((role) => role.name === 'Twitch')
 
-        if (!role) return console.log('Missing twitch role, cannnot send notification.')
+        if (!role) return console.error('Missing twitch role, cannnot send notification.')
 
         twitchNotifier({
             streamChange: data,
@@ -170,9 +66,6 @@ client.on(
 
         await serverStatus.update(guild)
 
-        // Add missing roles
-        updateAutomatedRoles()
-
         // Start the counting game
         try {
             await countingGame.initializeGame(client)
@@ -186,11 +79,6 @@ client.on(
         // Update the info channel names in discord every 10 minutes
         let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
             serverStatus.update(guild)
-        })
-
-        // Check that the bot has given necessary roles every hour
-        let rolesUptodateScheduler = schedule.scheduleJob('* */2 * * *', () => {
-            updateAutomatedRoles()
         })
 
         console.info(chalk.blue('//// Botti virallisesti hereillä.'))
@@ -236,10 +124,20 @@ client.on('messageDelete', (message) => {
 
 // Sends added reactions to be handled
 
-client.on('messageReactionAdd', (reaction, user) => {
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (reaction.partial) {
+        // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+        try {
+            await reaction.fetch()
+        } catch (error) {
+            console.error('Something went wrong when fetching the message: ', error)
+            // Return as `reaction.message.author` may be undefined/null
+            return
+        }
+    }
     if (!user || user.bot || user.partial) return
-
-    parseReaction({
+    handleReaction({
+        client: client,
         reaction: reaction,
         user: user,
         type: 'ADD'
@@ -247,18 +145,31 @@ client.on('messageReactionAdd', (reaction, user) => {
 })
 
 // Sends removed reactions to be handled
-client.on('guildMemberAdd', (member) => {
-    if (member.user.bot) return
-    toggleRole(member, 'Pelaaja', 'ADD')
-})
 
-client.on('messageReactionRemove', (reaction, user) => {
+client.on('messageReactionRemove', async (reaction, user) => {
+    if (reaction.partial) {
+        // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+        try {
+            await reaction.fetch()
+        } catch (error) {
+            console.error('Something went wrong when fetching the message: ', error)
+            // Return as `reaction.message.author` may be undefined/null
+            return
+        }
+    }
+
     if (!user || user.bot || user.partial) return
-    parseReaction({
+    handleReaction({
+        client: client,
         reaction: reaction,
         user: user,
         type: 'REMOVE'
     })
+})
+
+client.on('guildMemberAdd', (member) => {
+    if (member.user.bot) return
+    toggleRole(member, 'Pelaaja', 'ADD')
 })
 
 client.on('reconnecting', () => console.info('BOT RECONNECTING'))
