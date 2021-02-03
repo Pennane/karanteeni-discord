@@ -1,7 +1,5 @@
 import configuration from '../util/config'
 
-console.log(configuration)
-
 import axios from 'axios'
 import { ApiClient } from 'twitch'
 import { StaticAuthProvider } from 'twitch-auth'
@@ -28,58 +26,58 @@ setTimeout(() => {
 return;
 */
 
-// axios
-//     .post(
-//         `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`
-//     )
-//     .then(async (response) => {
-//         let accessToken = response.data.access_token
+axios
+    .post(
+        `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`
+    )
+    .then(async (response) => {
+        let accessToken = response.data.access_token
 
-//         const authProvider = new StaticAuthProvider(clientId as string, accessToken)
-//         const apiClient = new ApiClient({ authProvider })
+        const authProvider = new StaticAuthProvider(clientId as string, accessToken)
+        const apiClient = new ApiClient({ authProvider })
 
-//         const user = await apiClient.helix.users.getUserById(twitchUserId)
+        const user = await apiClient.helix.users.getUserById(twitchUserId)
 
-//         if (!user) throw new Error('missing proper user in twitch')
+        if (!user) throw new Error('missing proper user in twitch')
 
-//         let listener
+        let listener
 
-//         if (configuration.TWITCH.LISTENER.NGROK) {
-//             listener = await WebHookListener.create(apiClient, {
-//                 hostName: configuration.TWITCH.LISTENER.HOSTNAME,
-//                 port: 8090,
-//                 reverseProxy: { port: 443, ssl: true }
-//             })
-//         } else {
-//             listener = new WebHookListener(
-//                 apiClient,
-//                 new SimpleAdapter({
-//                     hostName: configuration.TWITCH.LISTENER.HOSTNAME as string,
-//                     listenerPort: 8090
-//                 })
-//             )
-//         }
+        if (configuration.TWITCH.LISTENER.NGROK) {
+            listener = await WebHookListener.create(apiClient, {
+                hostName: configuration.TWITCH.LISTENER.HOSTNAME,
+                port: 8090,
+                reverseProxy: { port: 443, ssl: true }
+            })
+        } else {
+            listener = new WebHookListener(
+                apiClient,
+                new SimpleAdapter({
+                    hostName: configuration.TWITCH.LISTENER.HOSTNAME as string,
+                    listenerPort: 8090
+                })
+            )
+        }
 
-//         listener.listen()
-//         let prevStream = await apiClient.helix.streams.getStreamByUserId(twitchUserId)
-//         const subscription = await listener.subscribeToStreamChanges(twitchUserId, async (stream) => {
-//             if (stream && !prevStream) {
-//                 let game = stream.gameId ? apiClient.helix.games.getGameById(stream.gameId) : null
-//                 TwitchEmitter.emit('streamChange', {
-//                     type: 'online',
-//                     user: stream.userDisplayName,
-//                     title: stream.title,
-//                     thumbnail: stream.thumbnailUrl,
-//                     profilePicture: user.profilePictureUrl,
-//                     game: await game
-//                 })
-//             }
-//             prevStream = stream || null
-//         })
-//     })
-//     .catch((exception): void => {
-//         console.log('error in twitch module')
-//         console.log(exception)
-//     })
+        listener.listen()
+        let prevStream = await apiClient.helix.streams.getStreamByUserId(twitchUserId)
+        const subscription = await listener.subscribeToStreamChanges(twitchUserId, async (stream) => {
+            if (stream && !prevStream) {
+                let game = stream.gameId ? apiClient.helix.games.getGameById(stream.gameId) : null
+                TwitchEmitter.emit('streamChange', {
+                    type: 'online',
+                    user: stream.userDisplayName,
+                    title: stream.title,
+                    thumbnail: stream.thumbnailUrl,
+                    profilePicture: user.profilePictureUrl,
+                    game: await game
+                })
+            }
+            prevStream = stream || null
+        })
+    })
+    .catch((exception): void => {
+        console.error('error in twitch module')
+        console.error(exception)
+    })
 
 export default TwitchEmitter

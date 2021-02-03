@@ -14,7 +14,7 @@ const configuration = {
 module.exports = {
     executor: function (message, client, args) {
         return new Promise(async (resolve, reject) => {
-            const CountUpGame = require('../../count_up/index')
+            const CountUpGame = import('../../count_up/index')
             let value = CountUpGame.current()
             embed.setTitle('Laskurin arvo').setDescription('Laskurissa tällä hetkelleä arvo: ' + value)
             message.channel.send(embed)

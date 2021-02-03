@@ -1,7 +1,7 @@
 import axios from 'axios'
 import Discord from 'discord.js'
 
-const configuration = require('../util/config')
+import configuration from '../util/config'
 
 let serverStatusUrl = 'https://api.mcsrvstat.us/2/mc.karanteeni.net'
 

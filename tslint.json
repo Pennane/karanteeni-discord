@@ -10,7 +10,7 @@
         ],
         "max-line-length": [
             false,
-            120
+            200
         ]
     },
     "rulesDirectory": []

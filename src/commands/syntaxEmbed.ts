@@ -1,6 +1,6 @@
 import Discord from 'discord.js'
 import { CommandConfiguration } from './Command'
-const configuration = require('../util/config')
+import configuration from '../util/config'
 const prefix = configuration.PREFIX
 
 interface SyntaxEmbedOptions {

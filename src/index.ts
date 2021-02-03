@@ -168,7 +168,7 @@ client.on(
 
         // Update server status
 
-        serverStatus.update(guild)
+        await serverStatus.update(guild)
 
         // Add missing roles
         updateAutomatedRoles()

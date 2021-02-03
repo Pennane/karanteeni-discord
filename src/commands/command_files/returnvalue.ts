@@ -28,7 +28,7 @@ const executor: CommandExecutor = (message, client, args) => {
             clientConfiguration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
         ) as TextChannel
 
-        if (!gameChannel) return console.log('missing gamechannel')
+        if (!gameChannel) return console.error('missing gamechannel')
 
         let embed = Command.createEmbed()
 

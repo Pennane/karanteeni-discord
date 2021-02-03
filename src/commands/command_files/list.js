@@ -1,6 +1,6 @@
 import Discord from 'discord.js'
 
-let serverStatus = require('../../server_status/status.js').cached
+import serverStatus from '../../server_status/status'
 
 let minecraftChatId = '613071441268834304'
 
@@ -21,7 +21,7 @@ module.exports = {
                 return
             }
             let embed = new Discord.MessageEmbed().setColor(0xf4e542)
-            let cachedStatus = serverStatus()
+            let cachedStatus = serverStatus.cached()
             if (!cachedStatus || !cachedStatus.players || !cachedStatus.players.list) {
                 message.channel.send('Ei onnannut hakea severin pelaajia')
             } else {

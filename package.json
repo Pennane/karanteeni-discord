@@ -6,9 +6,8 @@
     "type": "git",
     "url": "https://github.com/Pennane/karanteeni-discord.git"
   },
-  "main": "dist/index.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node dist/index.js",
+    "start": "cross-env NODE_ENV=production node ./dist/index.js",
     "dev": "NODE_OPTIONS='--trace-warnings' cross-env NODE_ENV=development nodemon src/index.ts",
     "build": "tsc"
   },
@@ -43,6 +42,6 @@
       "src/**/*.spec.ts",
       "*.json"
     ],
-    "exec": "ts-node src/index.ts"
+    "exec": "ts-node ./src/index.ts"
   }
 }
