@@ -1,6 +1,6 @@
 import Discord from 'discord.js';
 export declare type CommandExecutor = (message: Discord.Message, client: Discord.Client | undefined, args: Array<string>) => Promise<void>;
-interface CommandConfiguration {
+export interface CommandConfiguration {
     name: string;
     syntax: string;
     desc: string;

@@ -1,8 +1,14 @@
 import Discord from 'discord.js'
+import { CommandConfiguration } from './Command'
 const configuration = require('../util/config')
 const prefix = configuration.PREFIX
 
-const syntaxEmbed = ({ configuration, heading, body }) => {
+interface SyntaxEmbedOptions {
+    configuration: CommandConfiguration
+    heading?: string | null
+    body?: string | null
+}
+const syntaxEmbed: (options: SyntaxEmbedOptions) => void = ({ configuration, heading, body }) => {
     const embed = new Discord.MessageEmbed()
     embed.setColor('#FF0000')
 

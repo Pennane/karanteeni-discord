@@ -1,7 +1,8 @@
-import Discord from 'discord.js';
-declare const syntaxEmbed: ({ configuration, heading, body }: {
-    configuration: any;
-    heading: any;
-    body: any;
-}) => Discord.MessageEmbed;
+import { CommandConfiguration } from './Command';
+interface SyntaxEmbedOptions {
+    configuration: CommandConfiguration;
+    heading?: string | null;
+    body?: string | null;
+}
+declare const syntaxEmbed: (options: SyntaxEmbedOptions) => void;
 export default syntaxEmbed;

@@ -7,7 +7,7 @@ export type CommandExecutor = (
     args: Array<string>
 ) => Promise<void>
 
-interface CommandConfiguration {
+export interface CommandConfiguration {
     name: string
     syntax: string
     desc: string
