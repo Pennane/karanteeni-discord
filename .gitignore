@@ -1,6 +1,7 @@
 authorize.json
 node_modules
-count_up/data.json
-count_up/test_data.json
+data/countgame.json
+data/test_countgame.json
 .DS_Store
 .env
+dist

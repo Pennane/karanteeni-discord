@@ -4,7 +4,7 @@ dotenv.config({ path: `${__dirname}/../../.env` })
 let PREFIX = '/'
 
 let COUNTING_GAME = {
-    DATA_LOCATION: './count_up/data.json'
+    DATA_LOCATION: '../data/countgame.json'
 }
 
 let DISCORD = {
@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === 'development') {
     PREFIX = '-'
     DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME = '804096001191182338'
     DISCORD.ID_MAP.CHANNELS.COUNT_UP_ACHIEVEMENTS = '749663615547605142'
-    COUNTING_GAME.DATA_LOCATION = './count_up/test_data.json'
+    COUNTING_GAME.DATA_LOCATION = '../data/test_countgame.json'
 }
 
 const config = {

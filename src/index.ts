@@ -176,7 +176,7 @@ client.on(
         // Start the counting game
         try {
             await countingGame.initializeGame(client)
-            if (true || process.env.NODE_ENV === 'production') {
+            if (process.env.NODE_ENV === 'production') {
                 displayCachedNumberGame()
             }
         } catch (exception) {
