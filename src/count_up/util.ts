@@ -1,23 +1,27 @@
-const achievements = require('./achievements')
+import achievements from './achievements'
 import Discord from 'discord.js'
 
-export const pushHighestAchievedNumber = (value, destination) => {
+export const pushHighestAchievedNumber = (value: number, destination: Discord.TextChannel) => {
     destination.edit({
         topic: 'Huikeat #laskuri saavutukset. Korkein saavutettu numero on ' + value
     })
 }
-export const notifyFromAchievement = async (achievementMessage, destination) => {
+export const notifyFromAchievement = async (achievementMessage: string, destination: Discord.TextChannel) => {
     destination.send(achievementMessage)
 }
 
-export const findAchievement = (int) => {
+export const findAchievement = (int: number) => {
     if (int < 1) return undefined
     return achievements.find((achievement) => {
         return achievement[0](int)
     })
 }
 
-export const findAndGiveAchievements = async (int, message, destination) => {
+export const findAndGiveAchievements = async (
+    int: number,
+    message: Discord.Message,
+    destination: Discord.TextChannel
+) => {
     let achievement = findAchievement(int)
     if (achievement) {
         let achievementFunction = achievement[1]
@@ -26,7 +30,11 @@ export const findAndGiveAchievements = async (int, message, destination) => {
         notifyFromAchievement(congratulationsMessage, destination)
     }
 }
-export const sendResetMessage = (destination, member, customMessage) => {
+export const sendResetMessage = (
+    destination: Discord.TextChannel,
+    member: Discord.GuildMember,
+    customMessage?: string | null
+) => {
     let embed = new Discord.MessageEmbed()
         .setColor(0xf4e542)
         .setTitle('Takas nollaan että läsähti!')
@@ -37,7 +45,7 @@ export const sendResetMessage = (destination, member, customMessage) => {
 
     destination.send(embed)
 }
-export const sendCountingStartsAtOne = (destination, oldMessage) => {
+export const sendCountingStartsAtOne = (destination: Discord.TextChannel, oldMessage: Discord.Message) => {
     let embed = new Discord.MessageEmbed().setColor(0xf4e542)
     embed.setTitle('huomioikaa dumbot: se laskeminen alkaa ykkösestä')
     oldMessage.delete({ timeout: 7000 })

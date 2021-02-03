@@ -1,17 +1,20 @@
 "use strict";
-const configuration = require('../util/config');
-let { commands, triggers } = require('../commands/loader.js').loaded();
-const { EventEmitter } = require('events');
-let prefix = configuration.PREFIX;
-let specialMessages = new EventEmitter();
-module.exports = {
-    specialMessages,
-    parse: function (message, client) {
-        if (message.channel.id === configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME) {
-            return specialMessages.emit('countingGameMessage', {
-                message,
-                client
-            });
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SpecialMessages = void 0;
+const config_1 = __importDefault(require("../util/config"));
+const loader_1 = __importDefault(require("../commands/loader"));
+const events_1 = require("events");
+const { commands, triggers } = loader_1.default();
+const prefix = config_1.default.PREFIX;
+exports.SpecialMessages = new events_1.EventEmitter();
+const handler = {
+    parse: (message, client) => {
+        if (message.channel.id === config_1.default.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME) {
+            exports.SpecialMessages.emit('countingGameMessage', message);
+            return;
         }
         let hasPrefix = message.content.startsWith(prefix);
         if (!hasPrefix && message.content.includes('bad bot')) {
@@ -30,5 +33,7 @@ module.exports = {
             return;
         let command = commands.get(triggers[trigger]);
         command.execute(message, client, args);
+        return;
     }
 };
+exports.default = handler;

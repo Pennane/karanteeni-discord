@@ -5,7 +5,7 @@ export type CommandExecutor = (
     message: Discord.Message,
     client: Discord.Client | undefined,
     args: Array<string>
-) => Promise<any>
+) => Promise<void>
 
 interface CommandConfiguration {
     name: string
@@ -21,7 +21,7 @@ interface CommandConfiguration {
 
 interface CommandInitializer {
     configuration: CommandConfiguration
-    executor: (message: Discord.Message, client: Discord.Client | undefined, args: Array<string>) => Promise<any>
+    executor: (message: Discord.Message, client: Discord.Client | undefined, args: Array<string>) => Promise<void>
 }
 
 const commandVariants = [
@@ -114,7 +114,7 @@ class Command {
         }
     }
 
-    createEmbed(): Discord.MessageEmbed {
+    static createEmbed(): Discord.MessageEmbed {
         return new Discord.MessageEmbed().setColor(0xf4e542)
     }
 

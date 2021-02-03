@@ -1,6 +1,7 @@
 import Command, { CommandExecutor } from '../Command'
 import clientConfiguration from '../../util/config'
 import { EventEmitter } from 'events'
+import { TextChannel } from 'discord.js'
 
 export const ValueReturner = new EventEmitter()
 
@@ -14,44 +15,37 @@ const configuration = {
     requireGuild: true
 }
 
-
-
 const executor: CommandExecutor = (message, client, args) => {
-        return new Promise(async (resolve, reject) => {
-            if (!args[1]) return
+    return new Promise(async (resolve, reject) => {
+        if (!client) return
+        if (!args[1] || !message) return
 
-            let value = parseInt(args[1])
+        let value = parseInt(args[1])
 
-            if (isNaN(value)) return
+        if (isNaN(value)) return
 
-            let gameChannel = message.guild.channels.cache.get(
-                clientConfiguration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
-            )
-            ValueReturner.emit('returnedValue', value)
+        let gameChannel = client.channels.cache.get(
+            clientConfiguration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
+        ) as TextChannel
 
-            embed.setTitle('Palautetaan pelin arvoa...').setDescription('Asetetaan peliin arvo ' + value)
-            message.channel.send(embed)
+        if (!gameChannel) return console.log('missing gamechannel')
 
-            gameChannel
-                .send('`!!PELIIN ON PALAUTETTU UUSI ARVO! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
-                .then((m) => gameChannel.send(value))
-                .catch((err) => console.info(err))
-            resolve()
-        })
-    }
+        let embed = Command.createEmbed()
+
+        ValueReturner.emit('returnedValue', value)
+
+        embed.setTitle('Palautetaan pelin arvoa...').setDescription('Asetetaan peliin arvo ' + value)
+        message.channel.send(embed)
+
+        gameChannel
+            .send('`!!PELIIN ON PALAUTETTU UUSI ARVO! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
+            .then(() => gameChannel.send(value))
+            .catch((err) => console.info(err))
+        resolve()
+    })
 }
 
 export default new Command({
     configuration,
     executor
 })
-
-
-
-
-
-
-
-
-
-

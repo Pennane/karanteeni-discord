@@ -8,14 +8,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-const axios = require('axios').default;
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const axios_1 = __importDefault(require("axios"));
 const configuration = require('../util/config');
 let serverStatusUrl = 'https://api.mcsrvstat.us/2/mc.karanteeni.net';
 let cachedServerStatus = null;
 let cachedMemberCount = null;
 function fetchMinecraftServerStatus() {
     return new Promise((resolve, reject) => {
-        axios
+        axios_1.default
             .get(serverStatusUrl)
             .then(function (response) {
             resolve(response.data);
@@ -25,12 +29,15 @@ function fetchMinecraftServerStatus() {
         });
     });
 }
-function updateServerStatus(guild) {
+function update(guild) {
     return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         if (!guild || !guild.available)
             return console.info('Main guild is not available.');
         let minecraftplayersUpdateChannel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_MINECRAFT_SERVER);
         let discordusersUpdateChannel = guild.channels.cache.get(configuration.DISCORD.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD);
+        if (!minecraftplayersUpdateChannel || !discordusersUpdateChannel)
+            throw new Error('Missing channel');
         let serverStatus = yield fetchMinecraftServerStatus();
         if (!minecraftplayersUpdateChannel.editable || !discordusersUpdateChannel.editable) {
             return console.info('Unable to edit required channels. Aborting.');
@@ -42,8 +49,8 @@ function updateServerStatus(guild) {
             })
                 .catch((err) => console.info(err));
         }
-        let statusHasPlayercount = serverStatus && serverStatus.players && serverStatus.players.online;
-        let cachedStatusHasPlayercount = cachedServerStatus && cachedServerStatus.players && cachedServerStatus.players.online;
+        let statusHasPlayercount = (_a = serverStatus === null || serverStatus === void 0 ? void 0 : serverStatus.players) === null || _a === void 0 ? void 0 : _a.online;
+        let cachedStatusHasPlayercount = (_b = cachedServerStatus === null || cachedServerStatus === void 0 ? void 0 : cachedServerStatus.players) === null || _b === void 0 ? void 0 : _b.online;
         if (!serverStatus) {
             // API down
             minecraftplayersUpdateChannel
@@ -75,7 +82,8 @@ function updateServerStatus(guild) {
         resolve();
     }));
 }
-module.exports = {
-    update: updateServerStatus,
+const status = {
+    update: update,
     cached: () => cachedServerStatus
 };
+exports.default = status;

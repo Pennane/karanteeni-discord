@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const achievements = [
     //  [(current) => current === 69, (current, message) => 'Nice, ' + "<@" + message.author.id + ">" + ''],
     [(current) => current === 300, (current, message) => '<@' + message.author.id + '> saavutti luvun ' + current],
@@ -18,4 +19,4 @@ const achievements = [
         (current, message) => '<@' + message.author.id + '>' + ' saavutti luvun ' + current
     ]
 ];
-module.exports = achievements;
+exports.default = achievements;

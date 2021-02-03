@@ -1,6 +1,7 @@
 import configuration from '../util/config'
 import loader from '../commands/loader'
 import { EventEmitter } from 'events'
+import Discord from 'discord.js'
 
 const { commands, triggers } = loader()
 const prefix = configuration.PREFIX
@@ -8,10 +9,12 @@ const prefix = configuration.PREFIX
 export const SpecialMessages = new EventEmitter()
 
 const handler = {
-    parse: function (message, client) {
+    parse: (message: Discord.Message, client: Discord.Client): void => {
         if (message.channel.id === configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME) {
-            return specialMessages.emit('countingGameMessage', message)
+            SpecialMessages.emit('countingGameMessage', message)
+            return
         }
+
         let hasPrefix = message.content.startsWith(prefix)
 
         if (!hasPrefix && message.content.includes('bad bot')) {
@@ -33,6 +36,8 @@ const handler = {
 
         let command = commands.get(triggers[trigger])
         command.execute(message, client, args)
+
+        return
     }
 }
 

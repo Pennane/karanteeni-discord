@@ -2,8 +2,8 @@ import configuration from '../util/config'
 import fs from 'fs'
 import Discord from 'discord.js'
 
-import { ValueReturner } from '../commands/command_files/returnvalue.js'
-import { SpecialMessages } from '../message_handling/handler.js'
+import { ValueReturner } from '../commands/command_files/returnvalue'
+import { SpecialMessages } from '../message_handling/handler'
 
 import { pushHighestAchievedNumber, sendCountingStartsAtOne, sendResetMessage, findAndGiveAchievements } from './util'
 
@@ -41,7 +41,7 @@ const resetGame = (
     messageHandledAlready?: boolean
 ) => {
     if (!messageHandledAlready) {
-        sendResetMessage(destination, member, customMessage)
+        sendResetMessage(destination as Discord.TextChannel, member as Discord.GuildMember, customMessage)
     }
     currentNumber = 0
     userBuffer = []
@@ -104,70 +104,64 @@ const handleMessageDelete = (message: Discord.Message) => {
     saveValue(0)
 }
 
-const execute = (client: Discord.Client) => {
-    return new Promise(async (resolve, reject) => {
-        const gameChannel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
-        const achievementChannel = await client.channels.fetch(
-            configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_ACHIEVEMENTS
-        )
+const execute = async (client: Discord.Client): Promise<void> => {
+    const gameChannel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME)
+    const achievementChannel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_ACHIEVEMENTS)
 
-        if (!gameChannel || !achievementChannel) {
-            return reject(new Error('Missing required DISCORD content'))
+    if (!gameChannel || !achievementChannel) {
+        throw new Error('Missing required DISCORD content')
+    }
+
+    const handleGameMessage = (message: Discord.Message) => {
+        let { content, channel, member } = message
+        let sentInteger = parseInt(content)
+        message.type
+
+        if (currentNumber === 0 && sentInteger !== 1 && !isNaN(sentInteger)) {
+            sendCountingStartsAtOne(channel as Discord.TextChannel, message)
         }
 
-        const handleGameMessage = (message: Discord.Message) => {
-            let { content, channel, member } = message
-            let sentInteger = parseInt(content)
-            message.type
+        if (!member) return
 
-            if (currentNumber === 0 && sentInteger !== 1 && !isNaN(sentInteger)) {
-                sendCountingStartsAtOne(channel, message)
-            }
-
-            if (!member) return
-
-            if (!member.hasPermission('ADMINISTRATOR') && isNaN(sentInteger)) {
-                /* Sent message did not start with number */
-                message.delete()
-                resetGame(member, 'pelkkiä lukuja chattiin', channel)
-            } else if (userBuffer.indexOf(member.id) !== -1 && currentNumber !== 0) {
-                /* Sent message was from user in userbuffer */
-                resetGame(member, `anna vähintään ${maxUserBufferLength} pelaajan nostaa lukua ensin`, channel)
-            } else if (sentInteger !== currentNumber + 1 && currentNumber > 1) {
-                /* Sent message had wrong next number */
-                resetGame(member, null, channel)
-            } else if (sentInteger === currentNumber + 1 && userBuffer.indexOf(member.id) === -1) {
-                /* SENT MESSAGE WAS CORRECT FOR ONCE*/
-                currentNumber++
-                userBuffer.unshift(member.id)
-            }
-
-            /* Find possible achievements and update achievement channel */
-            findAndGiveAchievements(currentNumber, message, achievementChannel)
-
-            if (!cache.highestAchievedInteger || sentInteger > cache.highestAchievedInteger) {
-                /* Save highest achieved number to achievement channel in discord */
-                pushHighestAchievedNumber(sentInteger, achievementChannel)
-            }
-
-            if (cache.lastSavedInteger !== currentNumber) {
-                saveValue(currentNumber)
-            }
-
-            /* Reduce userbuffer to max length */
-            while (userBuffer.length > maxUserBufferLength) {
-                userBuffer.pop()
-            }
+        if (!member.hasPermission('ADMINISTRATOR') && isNaN(sentInteger)) {
+            /* Sent message did not start with number */
+            message.delete()
+            resetGame(member, 'pelkkiä lukuja chattiin', channel)
+        } else if (userBuffer.indexOf(member.id) !== -1 && currentNumber !== 0) {
+            /* Sent message was from user in userbuffer */
+            resetGame(member, `anna vähintään ${maxUserBufferLength} pelaajan nostaa lukua ensin`, channel)
+        } else if (sentInteger !== currentNumber + 1 && currentNumber > 1) {
+            /* Sent message had wrong next number */
+            resetGame(member, null, channel)
+        } else if (sentInteger === currentNumber + 1 && userBuffer.indexOf(member.id) === -1) {
+            /* SENT MESSAGE WAS CORRECT FOR ONCE*/
+            currentNumber++
+            userBuffer.unshift(member.id)
         }
 
-        SpecialMessages.on('countingGameMessage', (message: Discord.Message) => handleGameMessage(message))
+        /* Find possible achievements and update achievement channel */
+        findAndGiveAchievements(currentNumber, message, achievementChannel as Discord.TextChannel)
 
-        ValueReturner.on('returnedValue', (value) => {
-            saveValue(value)
-            userBuffer = []
-        })
+        if (!cache.highestAchievedInteger || sentInteger > cache.highestAchievedInteger) {
+            /* Save highest achieved number to achievement channel in discord */
+            pushHighestAchievedNumber(sentInteger, achievementChannel as Discord.TextChannel)
+        }
 
-        resolve()
+        if (cache.lastSavedInteger !== currentNumber) {
+            saveValue(currentNumber)
+        }
+
+        /* Reduce userbuffer to max length */
+        while (userBuffer.length > maxUserBufferLength) {
+            userBuffer.pop()
+        }
+    }
+
+    SpecialMessages.on('countingGameMessage', (message: Discord.Message) => handleGameMessage(message))
+
+    ValueReturner.on('returnedValue', (value) => {
+        saveValue(value)
+        userBuffer = []
     })
 }
 

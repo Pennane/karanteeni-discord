@@ -13,7 +13,7 @@ const configuration = {
 
 const executor: CommandExecutor = (message, client, args) => {
     return new Promise<void>(
-        async (resolve, reject): Promise<any> => {
+        async (resolve, reject): Promise<void> => {
             message.author.send(
                 'Komppaniassa herätys! Ovet auki, valot päälle. Taistelijat ylös punkasta. Hyvää huomenta komppania! \n\nTämän viestin jätti Susse ollessaan armeijassa. Punkassa rötinä oli kova ja odotus lomille sitäkin suurempi. Hajoaminen oli lähellä.'
             )

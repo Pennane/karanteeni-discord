@@ -1,35 +1,37 @@
 "use strict";
-module.exports = [
+Object.defineProperty(exports, "__esModule", { value: true });
+const listeners = [
     {
-        "name": "notificationsRole",
-        "emoji": {
-            "name": "❗",
-            "id": null,
-            "custom": false
+        name: 'notificationsRole',
+        emoji: {
+            name: '❗',
+            id: null,
+            custom: false
         },
-        "location": {
-            "channel": "726876806661013584",
-            "message": "726879559986839685"
+        location: {
+            channel: '726876806661013584',
+            message: '726879559986839685'
         },
-        "role": {
-            "name": "Ilmoitukset",
-            "removable": true
+        role: {
+            name: 'Ilmoitukset',
+            removable: true
         }
     },
     {
-        "name": "twitchNotificationsRole",
-        "emoji": {
-            "name": "Twitch",
-            "id": "749601508806623273",
-            "custom": true
+        name: 'twitchNotificationsRole',
+        emoji: {
+            name: 'Twitch',
+            id: '749601508806623273',
+            custom: true
         },
-        "location": {
-            "channel": "726876806661013584",
-            "message": "726879559986839685"
+        location: {
+            channel: '726876806661013584',
+            message: '726879559986839685'
         },
-        "role": {
-            "name": "Twitch",
-            "removable": true
+        role: {
+            name: 'Twitch',
+            removable: true
         }
     }
 ];
+exports.default = listeners;

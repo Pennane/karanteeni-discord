@@ -31,59 +31,56 @@ const toggleRole = (member: Discord.GuildMember, roleName: string, type: 'ADD' |
     }
 }
 
-const updateAutomatedRoles = (): Promise<void> => {
-    return new Promise(
-        async (resolve, reject): Promise<void> => {
-            const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
+const updateAutomatedRoles = async (): Promise<void> => {
+    const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
-            if (!guild) throw new Error('Client has an invalid MAIN_GUILD_ID')
+    if (!guild) throw new Error('Client has an invalid MAIN_GUILD_ID')
 
-            reactionListeners.forEach(async (listener: ReactionListener) => {
-                let channel = await client.channels.fetch(listener.location.channel)
-                if (!channel)
-                    return console.info(chalk.red(listener.name + ' uses a channel that does not exist in MAIN GUILD'))
+    reactionListeners.forEach(
+        async (listener: ReactionListener): Promise<void> => {
+            let channel = await client.channels.fetch(listener.location.channel)
+            if (!channel)
+                return console.info(chalk.red(listener.name + ' uses a channel that does not exist in MAIN GUILD'))
 
-                if (channel.type !== 'text') throw new Error('Tried to pass a channel that is not a text channel')
+            if (channel.type !== 'text') throw new Error('Tried to pass a channel that is not a text channel')
 
-                let message = await (channel as Discord.TextChannel).messages.fetch(listener.location.message)
+            let message = await (channel as Discord.TextChannel).messages.fetch(listener.location.message)
 
-                if (!message) return console.info(chalk.red(listener.name + ' uses a message id that can not be found'))
+            if (!message) return console.info(chalk.red(listener.name + ' uses a message id that can not be found'))
 
-                let reactionCache = message.reactions.cache.get(listener.emoji.id || listener.emoji.name)
+            let reactionCache = message.reactions.cache.get(listener.emoji.id || listener.emoji.name)
 
-                if (!reactionCache) {
-                    message.react(listener.emoji.id || listener.emoji.name)
-                    return
+            if (!reactionCache) {
+                message.react(listener.emoji.id || listener.emoji.name)
+                return
+            }
+
+            if (!reactionCache.me) {
+                message.react(listener.emoji.id || listener.emoji.name)
+            }
+
+            let reactedUsers = await reactionCache.users.fetch()
+
+            if (!reactedUsers) return
+
+            let roleName = listener.role.name
+
+            let role = guild.roles.cache.find((role) => role.name === roleName)
+
+            if (!role || role === undefined) return console.info(chalk.red("Missing role '" + roleName + "'"))
+
+            let memberCache = guild.members.cache
+
+            reactedUsers.forEach((user) => {
+                let member = memberCache.get(user.id)
+                if (!member) return
+
+                if (member.roles.cache.find((role) => role.name === roleName)) return
+
+                if (role) {
+                    member.roles.add(role)
                 }
-
-                if (!reactionCache.me) {
-                    message.react(listener.emoji.id || listener.emoji.name)
-                }
-
-                let reactedUsers = await reactionCache.users.fetch()
-
-                if (!reactedUsers) return
-
-                let roleName = listener.role.name
-
-                let role = guild.roles.cache.find((role) => role.name === roleName)
-
-                if (!role || role === undefined) return console.info(chalk.red("Missing role '" + roleName + "'"))
-
-                let memberCache = guild.members.cache
-
-                reactedUsers.forEach((user) => {
-                    let member = memberCache.get(user.id)
-                    if (!member) return
-
-                    if (member.roles.cache.find((role) => role.name === roleName)) return
-
-                    if (role) {
-                        member.roles.add(role)
-                    }
-                })
             })
-            resolve()
         }
     )
 }
@@ -94,7 +91,7 @@ interface ReactionParseInput {
     type: 'ADD' | 'REMOVE'
 }
 
-const parseReaction = async (parse: ReactionParseInput) => {
+const parseReaction = async (parse: ReactionParseInput): Promise<void> => {
     let reactionListener = reactionListeners.find((listener) => {
         let correctChannel = listener.location.message === parse.reaction.message.id
         let correctEmoji =
@@ -123,94 +120,99 @@ const parseReaction = async (parse: ReactionParseInput) => {
     }
 }
 
-function displayCachedNumberGame() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const channel = (await client.channels.fetch(
-                configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
-            )) as Discord.TextChannel
-            if (!channel) throw new Error('Number Game Channel missing')
-            if (channel.type !== 'text') throw new Error('Tried to pass a channel that is not a text channel')
-
-            const cachedNumber = countingGame.cachedInteger()
-            if (cachedNumber) {
-                await channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
-                await channel.send(cachedNumber)
-            } else {
-                await channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN ILMAN TALLENNETTUA NUMEROA`')
-            }
-        } catch (exception) {
-            console.info(exception)
-        } finally {
-            resolve(true)
-        }
-    })
-}
-
-twitchEmitter.on('streamChange', async (data) => {
-    if (!data || !data.user) return
-    if (data.type !== 'online') return
-
-    const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
-
-    let channel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.TWITCH_NOTIFICATIONS)
-    let role = guild.roles.cache.find((role) => role.name === 'Twitch')
-
-    twitchNotifier({
-        streamChange: data,
-        notifyRole: role,
-        destination: channel
-    })
-})
-
-client.on('ready', async () => {
-    const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
-
-    // Update server status
-    await serverStatus.update(guild)
-
-    // Add missing roles
-    await updateAutomatedRoles()
-
-    // Start the counting game
+const displayCachedNumberGame = async (): Promise<void> => {
     try {
-        await countingGame.initializeGame(client)
-        if (true || process.env.NODE_ENV === 'production') {
-            displayCachedNumberGame()
+        const channel = (await client.channels.fetch(
+            configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
+        )) as Discord.TextChannel
+        if (!channel) throw new Error('Number Game Channel missing')
+        if (channel.type !== 'text') throw new Error('Tried to pass a channel that is not a text channel')
+
+        const cachedNumber = countingGame.cachedInteger()
+        if (cachedNumber) {
+            await channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN! BOTTI ILMOITTAA VIIMEISIMMÄN NUMERON!!`')
+            await channel.send(cachedNumber)
+        } else {
+            await channel.send('`!!BOTTI ON KÄYNNISTETTY UUDESTAAN ILMAN TALLENNETTUA NUMEROA`')
         }
     } catch (exception) {
-        console.error(exception)
+        console.info(exception)
     }
+}
 
-    // Update the info channel names in discord every 10 minutes
-    let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
+twitchEmitter.on(
+    'streamChange',
+    async (data): Promise<void> => {
+        if (!data || !data.user) return
+        if (data.type !== 'online') return
+
+        const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
+
+        let channel = await client.channels.fetch(configuration.DISCORD.ID_MAP.CHANNELS.TWITCH_NOTIFICATIONS)
+        let role = guild.roles.cache.find((role) => role.name === 'Twitch')
+
+        if (!role) return console.log('Missing twitch role, cannnot send notification.')
+
+        twitchNotifier({
+            streamChange: data,
+            role: role,
+            destination: channel
+        })
+    }
+)
+
+client.on(
+    'ready',
+    async (): Promise<void> => {
+        const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
+
+        // Update server status
+
         serverStatus.update(guild)
-    })
 
-    // Check that the bot has given necessary roles every hour
-    let rolesUptodateScheduler = schedule.scheduleJob('* */2 * * *', () => {
+        // Add missing roles
         updateAutomatedRoles()
-    })
 
-    console.info(chalk.blue('//// Botti virallisesti hereillä.'))
-    console.info(chalk.blue('//// Käynnistyminen kesti'), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
-    console.info(
-        chalk.blue('//// Discord serverillä yhteensä', chalk.yellow(guild.memberCount), chalk.blue('pelaajaa'))
-    )
-    if (serverStatus.cached()) {
+        // Start the counting game
+        try {
+            await countingGame.initializeGame(client)
+            if (true || process.env.NODE_ENV === 'production') {
+                displayCachedNumberGame()
+            }
+        } catch (exception) {
+            console.error(exception)
+        }
+
+        // Update the info channel names in discord every 10 minutes
+        let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
+            serverStatus.update(guild)
+        })
+
+        // Check that the bot has given necessary roles every hour
+        let rolesUptodateScheduler = schedule.scheduleJob('* */2 * * *', () => {
+            updateAutomatedRoles()
+        })
+
+        console.info(chalk.blue('//// Botti virallisesti hereillä.'))
+        console.info(chalk.blue('//// Käynnistyminen kesti'), chalk.red(Date.now() - startingDate), chalk.blue('ms'))
         console.info(
-            chalk.blue(
-                '//// Minecraftissa tällä hetkellä',
-                chalk.yellow(serverStatus.cached().players.online),
-                chalk.blue('pelaajaa')
-            )
+            chalk.blue('//// Discord serverillä yhteensä', chalk.yellow(guild.memberCount), chalk.blue('pelaajaa'))
         )
-    } else {
-        console.info(chalk.red('//// Minecraft palvelin tuntuisi olevan pois päältä.'))
+        if (serverStatus.cached()) {
+            console.info(
+                chalk.blue(
+                    '//// Minecraftissa tällä hetkellä',
+                    chalk.yellow(serverStatus.cached().players.online),
+                    chalk.blue('pelaajaa')
+                )
+            )
+        } else {
+            console.info(chalk.red('//// Minecraft palvelin tuntuisi olevan pois päältä.'))
+        }
     }
-})
+)
 
-client.on('message', async (message) => {
+client.on('message', (message) => {
     const ignoreMessage = message.author.bot
     if (ignoreMessage) return
     messageHandler.parse(message, client)

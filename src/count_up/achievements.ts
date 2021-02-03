@@ -22,4 +22,4 @@ const achievements: Array<Achievement> = [
     ]
 ]
 
-module.exports = achievements
+export default achievements

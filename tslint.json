@@ -7,6 +7,10 @@
     "rules": {
         "trailing-comma": [
             false
+        ],
+        "max-line-length": [
+            false,
+            120
         ]
     },
     "rulesDirectory": []

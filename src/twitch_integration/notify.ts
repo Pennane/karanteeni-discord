@@ -1,8 +1,21 @@
 import Discord from 'discord.js'
 
-function notifyRole(notifyRequest) {
-    let { streamChange, notifyRole, destination } = notifyRequest
+interface StreamChange {
+    type: string
+    user: string
+    title: string
+    thumbnail: string
+    profilePicture: string
+    game: any
+}
 
+interface NotifyRequest {
+    streamChange: StreamChange
+    role: Discord.Role
+    destination: Discord.Channel
+}
+const notifyRole = (notifyRequest: NotifyRequest) => {
+    let { streamChange, role, destination } = notifyRequest
     console.info(streamChange)
 
     let embed = new Discord.MessageEmbed()
@@ -17,23 +30,21 @@ function notifyRole(notifyRequest) {
     embed
         .setAuthor(streamChange.user, streamChange.profilePicture)
         .setColor('#fdf500')
-        .setTitle(streamChange.title, streamUrl)
+        .setTitle(streamChange.title)
         .setImage(thumbnailUrl)
         .setURL(streamUrl)
         .setTimestamp()
         .setThumbnail(streamChange.profilePicture)
         .setFooter('Stream ilmoitus', 'https://i.imgur.com/WWmTu7c.png')
 
-    if (streamChange.game) {
+    if (streamChange.game && streamChange.game.name) {
         embed.addField(`Peli`, streamChange.game.name, true)
     }
 
-    let message = new Discord.APIMessage(destination, {
-        content: `[ <@&${notifyRole.id}> ]`,
+    ;(destination as Discord.TextChannel).send(null, {
+        content: `[ <@&${role.id}> ]`,
         embed: embed
     })
-
-    destination.send(message)
 }
 
 export default notifyRole
