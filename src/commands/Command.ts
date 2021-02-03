@@ -1,5 +1,6 @@
 import Discord from 'discord.js'
 import AppConfiguration from '../util/config'
+import SyntaxEmbed, { SyntaxEmbedOptions } from './syntaxEmbed'
 
 export type CommandExecutor = (
     message: Discord.Message,
@@ -55,63 +56,77 @@ const commandVariants = [
 const typeNames = commandVariants.map((type) => type.name)
 
 class Command {
-    type: Array<string>
-    hidden: boolean | undefined
-    description: string
-    syntax: string
-    name: string
-    triggers: Array<string>
-    adminCommand: boolean | undefined
-    superAdminCommand: boolean | undefined
-    requireGuild: boolean
-    executor: CommandExecutor
+    _type: Array<string>
+    _hidden: boolean | undefined
+    _description: string
+    _syntax: string
+    _name: string
+    _triggers: Array<string>
+    _adminCommand: boolean | undefined
+    _superAdminCommand: boolean | undefined
+    _requireGuild: boolean
+    _executor: CommandExecutor
 
     constructor(initializer: CommandInitializer) {
         const { configuration } = initializer
-
         let types: Array<string> = []
-
         if (configuration.type) {
             configuration.type.forEach((type) => {
                 if (typeNames.indexOf(type.toLowerCase()) === -1) return
                 types.push(type.toLowerCase())
             })
         }
-
-        this.type = types.length === 0 ? ['other'] : types
+        this._type = types.length === 0 ? ['other'] : types
         if (configuration.hidden) {
-            this.type = ['hidden']
-            this.hidden = true
+            this._type = ['hidden']
+            this._hidden = true
         }
-        this.name = configuration.name
-        this.description = configuration.desc
-        this.syntax = configuration.syntax
-        this.triggers = [...new Set(configuration.triggers)]
-        this.adminCommand = configuration.admin
-        this.superAdminCommand = configuration.superAdmin
-        this.executor = initializer.executor
-
-        this.requireGuild = typeof configuration.requireGuild === 'boolean' ? configuration.requireGuild : true
-
-        if (this.adminCommand && this.type.indexOf('admin') === -1) {
-            this.type.push('admin')
+        this._name = configuration.name
+        this._description = configuration.desc
+        this._syntax = configuration.syntax
+        this._triggers = [...new Set(configuration.triggers)]
+        this._adminCommand = configuration.admin
+        this._superAdminCommand = configuration.superAdmin
+        this._executor = initializer.executor
+        this._requireGuild = typeof configuration.requireGuild === 'boolean' ? configuration.requireGuild : true
+        if (this._adminCommand && this._type.indexOf('admin') === -1) {
+            this._type.push('admin')
         }
+    }
+
+    get name() {
+        return this._name
+    }
+
+    get triggers() {
+        return this._triggers
     }
 
     static commandVariants() {
         return commandVariants
     }
 
-    static isMemberAdminAuthorized(message: Discord.Message, client: Discord.Client): boolean {
+    static async isMemberAdminAuthorized(message: Discord.Message, client: Discord.Client): Promise<boolean> {
         if (message.member) {
+            console.log(11)
             return message.member.hasPermission('ADMINISTRATOR')
         } else {
+            console.log(12)
+
             const guild = client.guilds.cache.get(AppConfiguration.DISCORD.ID_MAP.GUILD)
             if (!guild) throw new Error('Faulty guild id')
-            const member = guild.member(message.author)
+            const member = await guild.members.fetch(message.author)
+            console.log(13)
+
             if (!member) return false
+            console.log(14)
+
             return member.hasPermission('ADMINISTRATOR')
         }
+    }
+
+    static syntaxEmbed(options: SyntaxEmbedOptions) {
+        return SyntaxEmbed(options)
     }
 
     static createEmbed(): Discord.MessageEmbed {
@@ -119,24 +134,25 @@ class Command {
     }
 
     unauthorizedAction(message: Discord.Message): void {
-        message.reply('Sinulla ei ole oikeutta käyttää komentoa ' + this.name)
+        message.reply('Sinulla ei ole oikeutta käyttää komentoa ' + this._name)
     }
 
-    execute(message: Discord.Message, client: Discord.Client | undefined, args: Array<string>): void {
-        if (this.requireGuild && !message.guild) return
+    async execute(message: Discord.Message, client: Discord.Client, args: Array<string>): Promise<void> {
+        if (this._requireGuild && !message.guild) return
 
         let adminAuthorization = false
 
-        if (!client)
-            if (this.adminCommand) {
-                adminAuthorization = client ? Command.isMemberAdminAuthorized(message, client) : false
-            }
+        if (!client) return
 
-        if (this.adminCommand && !adminAuthorization) {
+        if (this._adminCommand) {
+            adminAuthorization = await Command.isMemberAdminAuthorized(message, client)
+        }
+
+        if (this._adminCommand && !adminAuthorization) {
             return this.unauthorizedAction(message)
         }
 
-        this.executor(message, client, args).catch((err) => console.info(err))
+        this._executor(message, client, args).catch((err) => console.info(err))
     }
 }
 

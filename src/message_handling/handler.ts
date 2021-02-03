@@ -1,15 +1,31 @@
 import configuration from '../util/config'
+import Command from '../commands/Command'
 import loader from '../commands/loader'
 import { EventEmitter } from 'events'
 import Discord from 'discord.js'
 
-const { commands, triggers } = loader()
+let triggers: any
+let commands: Map<string, Command>
+
+let initialized: boolean = false
+
+const init = async () => {
+    const loaded = await loader()
+    commands = loaded.commands
+    triggers = loaded.triggers
+    initialized = true
+}
+
 const prefix = configuration.PREFIX
 
 export const SpecialMessages = new EventEmitter()
 
 const handler = {
-    parse: (message: Discord.Message, client: Discord.Client): void => {
+    parse: async (message: Discord.Message, client: Discord.Client): Promise<void> => {
+        if (!initialized) {
+            await init()
+        }
+
         if (message.channel.id === configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME) {
             SpecialMessages.emit('countingGameMessage', message)
             return
@@ -35,6 +51,8 @@ const handler = {
         if (!triggers.hasOwnProperty(trigger)) return
 
         let command = commands.get(triggers[trigger])
+        if (!command || !command.execute) return
+
         command.execute(message, client, args)
 
         return

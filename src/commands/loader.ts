@@ -7,8 +7,8 @@ const directory = fs.readdirSync(path.resolve(__dirname, commandDirectoryName))
 
 const reservedNames = ['työkalut', 'komennot', 'hauskat', 'kuvat', 'admin', 'muut']
 
-let loadedTriggers = new Map()
-let loadedCommands = new Map()
+let loadedTriggers: Map<string, Array<string>> = new Map()
+let loadedCommands: Map<string, Command> = new Map()
 
 interface CommandTarget {
     file: string
@@ -18,10 +18,10 @@ interface CommandTarget {
 const loadCommand = async (target: CommandTarget) => {
     let { file, directory } = target
 
-    const command: Command = await import(`${directory}/${file}`)
+    const importedCommand = await import(`${directory}/${file}`)
+    const command: Command = importedCommand.default
 
     if (!command) throw new Error(`Failed to load command from ${directory}/${file}`)
-
     let triggers: Array<string> = []
 
     try {
@@ -50,21 +50,28 @@ const loadCommand = async (target: CommandTarget) => {
     }
 }
 
+let commandPromises: Array<Promise<any>> = []
 directory.forEach((file: string) => {
-    if (!file.endsWith('.js') || !file.endsWith('.ts')) return
-    loadCommand({
-        file: file,
-        directory: commandDirectoryName
-    })
+    if (file.endsWith('.js') || file.endsWith('.ts')) {
+        console.log('loading file ' + file)
+        commandPromises.push(
+            loadCommand({
+                file: file,
+                directory: commandDirectoryName
+            })
+        )
+    }
 })
 
-const currentlyLoaded = () => {
+const currentlyLoaded = async () => {
+    await Promise.allSettled(commandPromises)
     let _triggers: any = {}
     loadedTriggers.forEach((triggers, command) => {
         triggers.forEach((trigger: string) => {
             _triggers[trigger] = command
         })
     })
+    console.log(_triggers)
     return { commands: loadedCommands, triggers: _triggers }
 }
 

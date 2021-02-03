@@ -3,12 +3,12 @@ import { CommandConfiguration } from './Command'
 import configuration from '../util/config'
 const prefix = configuration.PREFIX
 
-interface SyntaxEmbedOptions {
+export interface SyntaxEmbedOptions {
     configuration: CommandConfiguration
     heading?: string | null
     body?: string | null
 }
-const syntaxEmbed: (options: SyntaxEmbedOptions) => void = ({ configuration, heading, body }) => {
+const syntaxEmbed: (options: SyntaxEmbedOptions) => Discord.MessageEmbed = ({ configuration, heading, body }) => {
     const embed = new Discord.MessageEmbed()
     embed.setColor('#FF0000')
 
