@@ -16,22 +16,40 @@ export interface ReactionListener {
 }
 
 const listeners: Array<ReactionListener> = [
-    {
-        name: 'test',
-        emoji: {
-            name: '🎉',
-            id: null,
-            custom: false
-        },
-        location: {
-            channel: '804096001191182338',
-            message: '806502642519769128'
-        },
-        actions: [
-            { type: 'message', addMessage: null, removeMessage: 'gäng', target: 'sameuser' },
-            { type: 'role', name: 'testi', removable: true }
-        ]
-    },
+    // {
+    //     name: 'test',
+    //     emoji: {
+    //         name: '🎉',
+    //         id: null,
+    //         custom: false
+    //     },
+    //     location: {
+    //         channel: '749663615547605142',
+    //         message: '806858792447770636'
+    //     },
+    //     actions: [
+    //         {
+    //             type: 'message',
+    //             addMessage: 'Testi message. Useampi reaktio action',
+    //             removeMessage: 'poistit reaktion, ja poistin roolin',
+    //             target: 'sameuser'
+    //         },
+    //         {
+    //             type: 'message',
+    //             addMessage: 'Testi message. Useampi reaktio action',
+    //             removeMessage: 'poistit reaktion, ja poistin roolin',
+    //             target: 'samechannel'
+    //         },
+    //         {
+    //             type: 'message',
+    //             addMessage: 'Testi message. Eri channel kuin missä reaktio',
+    //             removeMessage: 'poistit reaktion,  Eri channel kuin missä reaktio',
+    //             target: 'channel',
+    //             targetChannel: '804096001191182338'
+    //         },
+    //         { type: 'role', name: 'testi', removable: true }
+    //     ]
+    // },
     {
         name: 'notificationsRole',
         emoji: {

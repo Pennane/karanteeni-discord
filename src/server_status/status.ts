@@ -12,12 +12,8 @@ function fetchMinecraftServerStatus() {
     return new Promise((resolve, reject) => {
         axios
             .get(serverStatusUrl)
-            .then(function (response) {
-                resolve(response.data)
-            })
-            .catch(function (error) {
-                reject(error)
-            })
+            .then((response) => resolve(response.data))
+            .catch((error) => reject(error))
     })
 }
 
@@ -29,6 +25,7 @@ function update(guild: Discord.Guild): Promise<void> {
             let minecraftplayersUpdateChannel = guild.channels.cache.get(
                 configuration.DISCORD.ID_MAP.CHANNELS.CURRENT_PLAYERS_ON_MINECRAFT_SERVER
             ) as Discord.VoiceChannel
+
             let discordusersUpdateChannel = guild.channels.cache.get(
                 configuration.DISCORD.ID_MAP.CHANNELS.ALL_PLAYERS_ON_DISCORD
             ) as Discord.VoiceChannel

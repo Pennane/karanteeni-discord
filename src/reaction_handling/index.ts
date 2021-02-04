@@ -3,7 +3,7 @@ import listeners from './listeners'
 import configuration from '../util/config'
 import { handleAction } from './actions'
 
-let client: Discord.Client
+// let client: Discord.Client
 
 export interface ReactionParseInput {
     client: Discord.Client
@@ -20,12 +20,6 @@ export interface ReactionParseInput {
 //     return listeners.reduce(reducer, [])
 // }
 
-const cacheRequiredMessages = (client: Discord.Client) => {
-    for (let listener of listeners) {
-        client
-    }
-}
-
 export const handle = async (event: ReactionParseInput): Promise<void> => {
     const { client, reaction, user, type } = event
     if (!user || user.bot || !reaction || !client || !type) return
@@ -38,6 +32,7 @@ export const handle = async (event: ReactionParseInput): Promise<void> => {
                 : listener.emoji.id === event.reaction.emoji.id
         return correctChannel && correctEmoji
     })
+
     if (!reactionListener) return
 
     const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
@@ -51,8 +46,7 @@ export const handle = async (event: ReactionParseInput): Promise<void> => {
 }
 
 const init = (passedClient: Discord.Client) => {
-    cacheRequiredMessages(passedClient)
-    client = passedClient
+    // client = passedClient
 }
 
 export default init

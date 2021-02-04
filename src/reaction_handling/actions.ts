@@ -1,8 +1,7 @@
 import { memberHasRole, toggleRole } from '../util/discordutil'
 import { ReactionParseInput } from './index'
 import configuration from '../util/config'
-
-const actions = new Map()
+import Discord from 'discord.js'
 
 export type Action = MessageAction | RoleAction
 
@@ -18,9 +17,35 @@ export interface MessageAction extends BaseAction {
     targetChannel?: string
 }
 
-const handleMessageAction = (action: MessageAction, event: ReactionParseInput) => {
-    console.info('in handle message actoin')
-    console.info(action)
+const parseMessageTarget = async (
+    action: MessageAction,
+    event: ReactionParseInput
+): Promise<Discord.TextChannel | Discord.User | null> => {
+    const { client, user, reaction } = event
+    const { target, targetChannel } = action
+    switch (target) {
+        case 'sameuser':
+            return user
+        case 'samechannel':
+            return reaction.message.channel as Discord.TextChannel
+        case 'channel':
+            if (!targetChannel) return null
+            return (await client.channels.fetch(targetChannel)) as Discord.TextChannel
+        default:
+            return null
+    }
+}
+
+const handleMessageAction = async (action: MessageAction, event: ReactionParseInput) => {
+    if (event.type === 'ADD' && action.addMessage) {
+        const target = await parseMessageTarget(action, event)
+        if (!target) return
+        target.send(action.addMessage)
+    } else if (event.type === 'REMOVE' && action.removeMessage) {
+        const target = await parseMessageTarget(action, event)
+        if (!target) return
+        target.send(action.removeMessage)
+    }
 }
 
 export interface RoleAction extends BaseAction {
