@@ -1,3 +1,3 @@
 # karanteeni-discord
 
-joo tää psykoosi siis pyörittää karanteenin dc bottia
+Discord community & administration bot for Karanteeni minecraft community built with typescript & Discord.js
