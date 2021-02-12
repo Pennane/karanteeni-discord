@@ -21,7 +21,7 @@ const executor: CommandExecutor = (message, client, args) => {
             return resolve()
         }
 
-        let [_command, targetId, reason] = args
+        let [_command, targetId, ...reasonArray] = args
 
         if (targetId.startsWith('<@') && targetId.endsWith('>')) {
             targetId = targetId.slice(2, -1)
@@ -29,6 +29,9 @@ const executor: CommandExecutor = (message, client, args) => {
                 targetId = targetId.slice(1)
             }
         }
+
+        let reason = reasonArray.join(' ')
+
         if (!targetId || !reason) {
             message.channel.send(configuration.syntax)
             return resolve()

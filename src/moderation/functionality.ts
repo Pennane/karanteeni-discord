@@ -1,30 +1,10 @@
 import Discord from 'discord.js'
 import fs from 'fs/promises'
-import { setBannedRank } from './utils'
+import { Ban, Milliseconds, User, UserData } from './types'
+import { discordUnban, discordBan, listenForUnban, informUser } from './utils'
 
 const userDataLocation = '../data/banned.json'
-
-let initialized = false
-
 let client: Discord.Client
-
-type Milliseconds = number
-
-interface Ban {
-    date: Milliseconds
-    duration: Milliseconds | 'permanent'
-    reason: string
-}
-
-interface User {
-    id: string
-    currentBan: Ban | null
-    allTimeBans: Ban[] | []
-}
-
-interface UserData {
-    [id: string]: User
-}
 
 const emptyUserData = {
     currentBan: null,
@@ -128,7 +108,19 @@ export const ban = async (id: string, duration: Milliseconds | 'permanent', reas
         currentBan: ban,
         allTimeBans: [...user.allTimeBans, ban]
     }
-    setBannedRank(id, true, client)
+
+    discordBan(id, reason, client)
+    listenForUnban(data)
+    informUser(
+        id,
+        'Sinut on bannittu karanteenin discordista.',
+        `Syy: ${reason}\n
+        ${
+            ban.duration === 'permanent'
+                ? `Bannit ovat ikuiset.`
+                : `Banni päättyy: ${new Date(ban.date + (ban.duration as number))}`
+        }`
+    )
     await setUser(data)
     return ban
 }
@@ -140,11 +132,15 @@ export const unban = async (id: string): Promise<User | null> => {
         ...user,
         currentBan: null
     }
-    setBannedRank(id, false, client)
+    discordUnban(id, client)
+    informUser(
+        id,
+        'Bannisi ovat loppuneet.',
+        `Bannisi ovat loppuneet tai manuaalisesti poistettu karanteenin discordista.`
+    )
     return await setUser(data)
 }
 
 export const init = (_client: Discord.Client): void => {
-    initialized = true
     client = _client
 }

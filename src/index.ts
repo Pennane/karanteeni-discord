@@ -5,12 +5,14 @@ import chalk from 'chalk'
 import configuration from './util/config'
 import { toggleRole } from './util/discordutil'
 import serverStatus from './server_status/status'
-import { handle as handleReaction } from './reaction_handling/index'
 import messageHandler from './message_handling/handler'
 import twitchEmitter from './twitch_integration/twitch'
 import twitchNotifier from './twitch_integration/notify'
 import countingGame from './count_up/index'
+
+import { handle as handleReaction } from './reaction_handling/index'
 import { init as initializeModeration, currentBan } from './moderation/index'
+import { init as initializeSendMessage } from './send_message/index'
 
 let startingDate = Date.now()
 const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION', 'USER'] })
@@ -64,6 +66,8 @@ client.on(
         const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
         initializeModeration(client)
+
+        initializeSendMessage(client)
 
         // Update server status
         await serverStatus.update(guild)
@@ -171,10 +175,11 @@ client.on('messageReactionRemove', async (reaction, user) => {
 
 client.on('guildMemberAdd', async (member) => {
     if (member.user.bot) return
-    if (await currentBan(member.id)) {
-        toggleRole(member, 'Banned', 'ADD')
-    } else {
+    const banned = await currentBan(member.id)
+    if (!banned) {
         toggleRole(member, 'Pelaaja', 'ADD')
+    } else {
+        console.log(member.id + ' joined while banned. Did not receive pelaaja role')
     }
 })
 

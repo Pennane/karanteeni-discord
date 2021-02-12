@@ -6,7 +6,7 @@ import { parseDuration } from '../../moderation/utils'
 const configuration = {
     name: 'ban',
     admin: true,
-    syntax: 'ban <userId | @user> <duration as y | m |d | h> <reason>',
+    syntax: 'ban <userId | @user> <duration as y | m | d | h | s> <reason>',
     desc: 'Bänni ukkeli',
     triggers: ['ban'],
     type: ['työkalut'],
@@ -21,7 +21,7 @@ const executor: CommandExecutor = (message, client, args) => {
             return resolve()
         }
 
-        let [_command, targetId, durationString, reason] = args
+        let [_command, targetId, durationString, ...reasonArray] = args
 
         if (targetId.startsWith('<@') && targetId.endsWith('>')) {
             targetId = targetId.slice(2, -1)
@@ -29,6 +29,8 @@ const executor: CommandExecutor = (message, client, args) => {
                 targetId = targetId.slice(1)
             }
         }
+
+        let reason = reasonArray.join(' ')
 
         let duration = parseDuration(durationString)
 
