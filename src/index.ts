@@ -10,6 +10,7 @@ import messageHandler from './message_handling/handler'
 import twitchEmitter from './twitch_integration/twitch'
 import twitchNotifier from './twitch_integration/notify'
 import countingGame from './count_up/index'
+import { init as initializeModeration, currentBan } from './moderation/index'
 
 let startingDate = Date.now()
 const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION', 'USER'] })
@@ -62,8 +63,9 @@ client.on(
     async (): Promise<void> => {
         const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
-        // Update server status
+        initializeModeration(client)
 
+        // Update server status
         await serverStatus.update(guild)
 
         // Start the counting game
@@ -77,7 +79,7 @@ client.on(
         }
 
         // Update the info channel names in discord every 10 minutes
-        let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
+        schedule.scheduleJob('*/10 * * * *', () => {
             serverStatus.update(guild)
         })
 
@@ -167,9 +169,13 @@ client.on('messageReactionRemove', async (reaction, user) => {
     })
 })
 
-client.on('guildMemberAdd', (member) => {
+client.on('guildMemberAdd', async (member) => {
     if (member.user.bot) return
-    toggleRole(member, 'Pelaaja', 'ADD')
+    if (await currentBan(member.id)) {
+        toggleRole(member, 'Banned', 'ADD')
+    } else {
+        toggleRole(member, 'Pelaaja', 'ADD')
+    }
 })
 
 client.on('reconnecting', () => console.info('BOT RECONNECTING'))
