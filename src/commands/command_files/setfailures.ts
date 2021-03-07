@@ -16,11 +16,11 @@ const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
         let failLocation = config.COUNTING_GAME.FAILURE_LOCATION
 
-        if (!fs.existsSync(failLocation)) return
+        if (!fs.existsSync(failLocation)) return console.log('syystä x yks tiedosto puuttuu, ja tää ei siks toimi')
 
-        if (args.length < 3) return
+        if (args.length < 3) return console.log('/tallennamokat pelaaja_id mokie_määrä')
 
-        if (!parseInt(args[2])) return
+        if (!parseInt(args[2])) return console.log('mokien määrä numerona, kiitos')
 
         const id = args[1]
         const fails = parseInt(args[2])

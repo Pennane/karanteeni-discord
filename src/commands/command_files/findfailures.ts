@@ -16,9 +16,9 @@ const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
         let failLocation = config.COUNTING_GAME.FAILURE_LOCATION
 
-        if (!fs.existsSync(failLocation)) return
+        if (!fs.existsSync(failLocation)) return message.channel.send('ei ollenkaan tallennettuja mokia')
 
-        if (args.length < 2) return
+        if (args.length < 2) return message.channel.send('laita se pelaaja id siihe kans')
 
         const id = args[1]
         const embed = Command.createEmbed()
