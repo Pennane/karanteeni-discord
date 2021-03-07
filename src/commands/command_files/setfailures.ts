@@ -30,7 +30,7 @@ const executor: CommandExecutor = (message, client, args) => {
         fs.writeFileSync(failLocation, JSON.stringify(failData))
         embed.setTitle('Tallennetut mokat').setDescription(`Tallennettu uusi mokien määrä.`)
         message.channel.send(embed)
-        resolve()
+        return resolve()
     })
 }
 
