@@ -18,15 +18,28 @@ type UserBuffer = Array<UserId>
 let cache: CountingGameCache
 let currentNumber = 0
 let maxUserBufferLength = 2
+
 let userBuffer: UserBuffer = []
 
-const initializeData = () => {
-    let dataLocation = configuration.COUNTING_GAME.DATA_LOCATION
-    if (!fs.existsSync(dataLocation)) {
-        fs.writeFileSync(dataLocation, '{"lastSavedInteger": 0, "highestAchievedInteger": 0}')
+const saveFailure = (id: string): void => {
+    let destination = configuration.COUNTING_GAME.FAILURE_LOCATION
+
+    if (!fs.existsSync(destination)) {
+        fs.writeFileSync(destination, '{}')
     }
 
-    cache = JSON.parse(fs.readFileSync(dataLocation, 'utf8'))
+    let failureData = JSON.parse(fs.readFileSync(destination, 'utf8'))
+    failureData[id] = failureData[id] ? failureData[id] + 1 : 1
+    fs.writeFileSync(destination, JSON.stringify(failureData))
+}
+
+const initializeData = () => {
+    let destination = configuration.COUNTING_GAME.DATA_LOCATION
+    if (!fs.existsSync(destination)) {
+        fs.writeFileSync(destination, '{"lastSavedInteger": 0, "highestAchievedInteger": 0}')
+    }
+
+    cache = JSON.parse(fs.readFileSync(destination, 'utf8'))
 
     if (cache.lastSavedInteger) {
         currentNumber = cache.lastSavedInteger
@@ -35,15 +48,15 @@ const initializeData = () => {
 
 initializeData()
 
-const resetGame = (
-    member: Discord.GuildMember | null,
-    customMessage: string | null,
-    destination: Discord.Channel | null,
-    messageHandledAlready?: boolean
-) => {
+const resetGame = (member: Discord.GuildMember | null, customMessage: string | null, destination: Discord.Channel | null, messageHandledAlready?: boolean) => {
+    if (process.env.NODE_ENV === 'production' && member?.id && currentNumber > 10) {
+        saveFailure(member.id)
+    }
+
     if (!messageHandledAlready) {
         sendResetMessage(destination as Discord.TextChannel, member as Discord.GuildMember, customMessage)
     }
+
     currentNumber = 0
     userBuffer = []
 }
@@ -66,13 +79,13 @@ const handleMessageEdit = (oldMessage: Discord.Message, newMessage: Discord.Mess
 
     let oldInteger = parseInt(oldMessage.content)
     let newInteger = parseInt(newMessage.content)
+
     if (!oldInteger || oldInteger > currentNumber || oldInteger === newInteger) return
+
     const userId = newMessage?.member?.user?.id
-    let embed = new Discord.MessageEmbed()
-        .setColor(0xf44242)
-        .setTitle('Takas nollaan että läsähti!')
-        .addField('Vanha arvo:', oldInteger, true)
-        .addField('Uusi arvo:', newInteger, true)
+
+    let embed = new Discord.MessageEmbed().setColor(0xf44242).setTitle('Takas nollaan että läsähti!').addField('Vanha arvo:', oldInteger, true).addField('Uusi arvo:', newInteger, true)
+
     if (userId) {
         embed.setDescription(`<@${userId}> vaihtoi viestin arvoa.`)
     } else {
@@ -124,34 +137,32 @@ const execute = async (client: Discord.Client): Promise<void> => {
         if (!member) return
 
         if (!member.hasPermission('ADMINISTRATOR') && isNaN(sentInteger)) {
-            /* Sent message did not start with number */
+            /* Message does not start with a number */
             message.delete()
             resetGame(member, 'pelkkiä lukuja chattiin', channel)
-        } else if (userBuffer.indexOf(member.id) !== -1 && currentNumber !== 0) {
-            /* Sent message was from user in userbuffer */
+        } else if (userBuffer.includes(member.id) && currentNumber !== 0) {
+            /* Message is from user in the old userbuffer */
             resetGame(member, `anna vähintään ${maxUserBufferLength} pelaajan nostaa lukua ensin`, channel)
         } else if (sentInteger !== currentNumber + 1 && currentNumber > 1) {
-            /* Sent message had wrong next number */
+            /*  Message has wrong number */
             resetGame(member, null, channel)
-        } else if (sentInteger === currentNumber + 1 && userBuffer.indexOf(member.id) === -1) {
-            /* SENT MESSAGE WAS CORRECT FOR ONCE*/
+        } else if (sentInteger === currentNumber + 1 && !userBuffer.includes(member.id)) {
+            /* VALUE IS VALID*/
             currentNumber++
             userBuffer.unshift(member.id)
         }
 
         if (!cache.highestAchievedInteger || sentInteger > cache.highestAchievedInteger) {
-            /* Save highest achieved number to achievement channel in discord */
             pushHighestAchievedNumber(sentInteger, achievementChannel as Discord.TextChannel)
         }
 
-        /* Find possible achievements and update achievement channel */
         findAndGiveAchievements(currentNumber, message, achievementChannel as Discord.TextChannel)
 
         if (cache.lastSavedInteger !== currentNumber) {
             saveValue(currentNumber)
         }
 
-        /* Reduce userbuffer to max length */
+        /* Clamp userbuffer to max length */
         while (userBuffer.length > maxUserBufferLength) {
             userBuffer.pop()
         }
