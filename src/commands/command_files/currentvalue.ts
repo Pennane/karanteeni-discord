@@ -12,11 +12,10 @@ const configuration = {
 
 const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
-        const importedGame = await import('../../count_up/index')
-        const CountUpGame = importedGame.default
+        const CountUpGame = (await import('../../count_up/index')).default
         const value = CountUpGame.current()
         const embed = Command.createEmbed()
-        embed.setTitle('Laskurin arvo').setDescription('Laskurissa tällä hetkelleä arvo: ' + value)
+        embed.setTitle('Laskurin arvo').setDescription('Laskurissa on tällä hetkellä arvo: ' + value)
         message.channel.send(embed)
         resolve()
     })
