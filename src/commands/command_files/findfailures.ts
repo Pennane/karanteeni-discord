@@ -26,7 +26,7 @@ const executor: CommandExecutor = (message, client, args) => {
         const playerFails = failData[id] || 0
         embed.setTitle('Tallennetut mokat').setDescription(`Pelaajalla <@${id}> ${playerFails} tallennettua mokaa`)
         message.channel.send(embed)
-        resolve()
+        return resolve()
     })
 }
 
