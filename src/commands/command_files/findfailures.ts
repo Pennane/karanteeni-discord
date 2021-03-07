@@ -7,7 +7,7 @@ const configuration = {
     admin: true,
     syntax: 'mokat <pelaaja_id>',
     desc: 'hae tallennettujen mokien määrä',
-    triggers: ['mokat'],
+    triggers: ['mokat', 'haemokat'],
     type: ['työkalut'],
     requireGuild: false
 }

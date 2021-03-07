@@ -2,11 +2,7 @@ import Discord from 'discord.js'
 import AppConfiguration from '../util/config'
 import SyntaxEmbed, { SyntaxEmbedOptions } from './syntaxEmbed'
 
-export type CommandExecutor = (
-    message: Discord.Message,
-    client: Discord.Client | undefined,
-    args: Array<string>
-) => Promise<void>
+export type CommandExecutor = (message: Discord.Message, client: Discord.Client, args: Array<string>) => Promise<void>
 
 export interface CommandConfiguration {
     name: string
@@ -22,7 +18,7 @@ export interface CommandConfiguration {
 
 interface CommandInitializer {
     configuration: CommandConfiguration
-    executor: (message: Discord.Message, client: Discord.Client | undefined, args: Array<string>) => Promise<void>
+    executor: (message: Discord.Message, client: Discord.Client, args: Array<string>) => Promise<void>
 }
 
 const commandVariants = [
