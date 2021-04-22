@@ -19,14 +19,14 @@ const executor: CommandExecutor = (message, client, args) => {
         let users = await currentlyBannedUsers()
 
         if (!users || users.length === 0) {
-            message.channel.send(`No one is banned.`)
+            message.channel.send(`Kenenkään banneja ei ole tallennettu muistiin.`)
             return
         }
 
         let text = users.reduce((t, c) => {
             if (!c.currentBan) return t
 
-            return t.concat(`<@!${c.id}> ${c.currentBan?.duration === 'permanent' ? 'permanent' : `temp`}
+            return t.concat(`<@!${c.id}> ${c.currentBan?.duration === 'permanent' ? 'loputtomat' : `ajalliset`}
              `)
         }, '')
         message.channel.send(text)

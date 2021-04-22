@@ -66,7 +66,6 @@ export const listenForUnban = async (user: User) => {
     if (ban && ban.duration !== 'permanent') {
         cron.scheduleJob(ban.date + ban.duration, async () => {
             unban(user.id)
-            console.log('unbanned ' + user.id)
             informInActionLog(`<@${user.id}> bannit ovat loppuneet`)
         })
     }

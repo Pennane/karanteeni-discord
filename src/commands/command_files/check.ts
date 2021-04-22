@@ -13,9 +13,10 @@ const configuration = {
 
 const executor: CommandExecutor = async (message, client, args) => {
     if (!client) return
+    let syntaxEmbed = Command.syntaxEmbed({ configuration })
 
     if (!args[1]) {
-        message.channel.send(configuration.syntax)
+        message.channel.send(syntaxEmbed)
         return
     }
     let [_command, targetId] = args
@@ -28,7 +29,7 @@ const executor: CommandExecutor = async (message, client, args) => {
     }
 
     if (!targetId) {
-        message.channel.send(configuration.syntax)
+        message.channel.send(syntaxEmbed)
         return
     }
 
@@ -52,8 +53,10 @@ const executor: CommandExecutor = async (message, client, args) => {
         embed.addField(
             'Bannit päättyvät',
             current.duration === 'permanent'
-                ? `The ban is permanent.`
-                : `Ban expires \`${new Date(current.date + (current.duration as number)).toLocaleDateString('fi')}\``
+                ? `Bannit ovat loputtomat.`
+                : `Bannit loppuvat \`${new Date(current.date + (current.duration as number)).toLocaleDateString(
+                      'fi'
+                  )}\``
         )
     } else {
         embed.addField('Tällä hetkellä bännättynä?', 'ei')

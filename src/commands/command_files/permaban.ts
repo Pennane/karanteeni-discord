@@ -16,8 +16,9 @@ const configuration = {
 const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
         if (!client) return
+        let syntaxEmbed = Command.syntaxEmbed({ configuration })
         if (!args[2]) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 
@@ -33,16 +34,16 @@ const executor: CommandExecutor = (message, client, args) => {
         let reason = reasonArray.join(' ')
 
         if (!targetId || !reason) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 
         const newBan = await ban(targetId, 'permanent', reason)
-        if (newBan) {
-            message.channel.send(`Permanently banned <@${targetId}> with reason \`${newBan.reason}.\``)
-        } else {
-            message.channel.send(`Failed to permaban <@${targetId}>`)
+        if (!newBan) {
+            message.channel.send(`Käyttäjää <@${targetId}> ei onnistuttu bännäämään.`)
+            return
         }
+        message.channel.send(`Permabannattu <@${targetId}> syystä \`${newBan.reason}.\``)
     })
 }
 

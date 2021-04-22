@@ -20,7 +20,10 @@ const syntaxEmbed: (options: SyntaxEmbedOptions) => Discord.MessageEmbed = ({ co
     embed.description = body || `\`${prefix}${configuration.syntax}\``
 
     if (configuration.triggers.length > 1) {
-        embed.addField(`Vaihtoehtoiset nimet komennolle`, configuration.triggers.join(' '))
+        embed.addField(
+            `Vaihtoehtoiset nimet komennolle`,
+            configuration.triggers.map((trigger) => prefix.concat(trigger)).join(' ')
+        )
     }
 
     return embed

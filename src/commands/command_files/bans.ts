@@ -15,9 +15,10 @@ const configuration = {
 const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
         if (!client) return
+        let syntaxEmbed = Command.syntaxEmbed({ configuration })
 
         if (!args[1]) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 
@@ -31,7 +32,7 @@ const executor: CommandExecutor = (message, client, args) => {
         }
 
         if (!targetId) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 

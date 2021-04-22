@@ -5,7 +5,7 @@ import { warn } from '../../moderation/index'
 const configuration = {
     name: 'warn',
     admin: true,
-    syntax: 'warn <userId | @user>  <reason>',
+    syntax: 'warn <userId | @user> <reason>',
     desc: 'Warn ukkeli',
     triggers: ['warn', 'varoita'],
     type: ['työkalut'],
@@ -15,9 +15,10 @@ const configuration = {
 const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
         if (!client) return
+        let syntaxEmbed = Command.syntaxEmbed({ configuration })
 
         if (!args[2]) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 
@@ -33,21 +34,21 @@ const executor: CommandExecutor = (message, client, args) => {
         let reason = reasonArray.join(' ')
 
         if (!targetId || !reason) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 
         const newWarn = await warn(targetId, reason)
 
         if (!newWarn) {
-            message.channel.send(`Failed to warn <@${targetId}>`)
+            message.channel.send(`Käyttäjää <@${targetId}> ei onnistuttu varoittamaan.`)
             return
         }
 
-        message.channel.send(`Warned <@${targetId}> with reason \`${newWarn.reason}\`.`)
+        message.channel.send(`Varoitettu käyttäjää <@${targetId}> syystä \`${newWarn.reason}\`.`)
 
         if (newWarn.causedBan) {
-            message.channel.send(`THE WARN CAUSED A BAN. <@${targetId}> HAS BEEN AUTOMATICALLY BANNED FOR 14 DAYS.`)
+            message.channel.send(`ANNETTU VAROITUS ANTOI KÄYTTÄJÄLLE <@${targetId}> AUTOMAATTISET 14 PÄIVÄN BANNIT.`)
         }
     })
 }

@@ -15,9 +15,10 @@ const configuration = {
 
 const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
+        let syntaxEmbed = Command.syntaxEmbed({ configuration })
         if (!client) return
         if (!args[3]) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 
@@ -35,20 +36,21 @@ const executor: CommandExecutor = (message, client, args) => {
         let duration = parseDuration(durationString)
 
         if (!targetId || !duration || !reason) {
-            message.channel.send(configuration.syntax)
+            message.channel.send(syntaxEmbed)
             return resolve()
         }
 
         const newBan = await ban(targetId, duration, reason)
-        if (newBan) {
-            message.channel.send(
-                `Banned <@${targetId}> with reason \`${newBan.reason}\`. Ban expires \`${new Date(
-                    newBan.date + (newBan.duration as number)
-                ).toLocaleDateString('fi')}\``
-            )
-        } else {
-            message.channel.send(`Failed to ban <@${targetId}>`)
+        if (!newBan) {
+            message.channel.send(`Käyttäjää <@${targetId} ei onnistuttu bannaamaan.>`)
+            return
         }
+
+        message.channel.send(
+            `Bannittu <@${targetId}> syystä \`${newBan.reason}\`. Bannit loppuvat \`${new Date(
+                newBan.date + (newBan.duration as number)
+            ).toLocaleDateString('fi')}\``
+        )
     })
 }
 
