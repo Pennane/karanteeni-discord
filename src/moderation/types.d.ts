@@ -10,6 +10,7 @@ export interface Warn {
     date: Milliseconds
     reason: string
     id: string
+    penalised: boolean
 }
 
 export interface User {

@@ -19,6 +19,21 @@ const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION',
 
 const countingGameChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
 
+import commandData from './commands/loader'
+import fs from 'fs/promises'
+
+const createCommandMap = async () => {
+    let { commands } = await commandData()
+    let commandMetaMap: {}[] = []
+    commands.forEach((command) => {
+        commandMetaMap.push(command._configuration)
+    })
+
+    await fs.writeFile(__dirname + '/../commandMetaMap.json', JSON.stringify(commandMetaMap))
+}
+
+createCommandMap()
+
 const displayCachedNumberGame = async (): Promise<void> => {
     try {
         const channel = (await client.channels.fetch(

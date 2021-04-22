@@ -21,7 +21,9 @@ const getUser = async (id: string): Promise<Discord.User> => {
 export const sendMessageToUser = async (userId: string, message: string | Discord.MessageEmbed) => {
     const user = await getUser(userId)
     if (!user) return
-    user.send(message)
+    try {
+        await user.send(message)
+    } catch {}
 }
 
 export const sendMessageToChannel = async (channelId: string, message: string | Discord.MessageEmbed) => {

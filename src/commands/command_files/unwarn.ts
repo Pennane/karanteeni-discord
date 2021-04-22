@@ -1,13 +1,13 @@
 import Command, { CommandExecutor } from '../Command'
 
-import { warn } from '../../moderation/index'
+import { unwarn } from '../../moderation/index'
 
 const configuration = {
-    name: 'warn',
+    name: 'unwarn',
     admin: true,
-    syntax: 'warn <userId | @user>  <reason>',
-    desc: 'Warn ukkeli',
-    triggers: ['warn', 'varoita'],
+    syntax: 'unwarn <userId | @user>  <warn id>',
+    desc: 'Unwarn ukkeli',
+    triggers: ['unwarn'],
     type: ['työkalut'],
     requireGuild: false
 }
@@ -21,7 +21,7 @@ const executor: CommandExecutor = (message, client, args) => {
             return resolve()
         }
 
-        let [_command, targetId, ...reasonArray] = args
+        let [_command, targetId, warnId] = args
 
         if (targetId.startsWith('<@') && targetId.endsWith('>')) {
             targetId = targetId.slice(2, -1)
@@ -30,25 +30,19 @@ const executor: CommandExecutor = (message, client, args) => {
             }
         }
 
-        let reason = reasonArray.join(' ')
-
-        if (!targetId || !reason) {
+        if (!targetId || !warnId) {
             message.channel.send(configuration.syntax)
             return resolve()
         }
 
-        const newWarn = await warn(targetId, reason)
+        const afterUnwarn = await unwarn(targetId, warnId)
 
-        if (!newWarn) {
-            message.channel.send(`Failed to warn <@${targetId}>`)
+        if (!afterUnwarn) {
+            message.channel.send('Kyseiseltä käyttäjältä ei voitu poistaa varoitusta kyseisellä id:llä')
             return
         }
 
-        message.channel.send(`Warned <@${targetId}> with reason \`${newWarn.reason}\`.`)
-
-        if (newWarn.causedBan) {
-            message.channel.send(`THE WARN CAUSED A BAN. <@${targetId}> HAS BEEN AUTOMATICALLY BANNED FOR 14 DAYS.`)
-        }
+        message.channel.send(`Varoitus \`${warnId}\` poistettu`)
     })
 }
 

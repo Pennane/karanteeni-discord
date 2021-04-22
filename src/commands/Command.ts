@@ -66,9 +66,11 @@ class Command {
     _superAdminCommand: boolean | undefined
     _requireGuild: boolean
     _executor: CommandExecutor
+    _configuration: CommandConfiguration
 
     constructor(initializer: CommandInitializer) {
         const { configuration } = initializer
+        this._configuration = configuration
         let types: Array<string> = []
         if (configuration.type) {
             configuration.type.forEach((type) => {

@@ -3,10 +3,10 @@ import Command, { CommandExecutor } from '../Command'
 import { currentlyBannedUsers } from '../../moderation/index'
 
 const configuration = {
-    name: 'banned',
+    name: 'allbanned',
     admin: true,
-    syntax: 'banned ',
-    desc: 'Unbanni ukkeli',
+    syntax: 'allbanned ',
+    desc: 'Kaikki jotka on bännitty ukkeli',
     triggers: ['allbanned'],
     type: ['työkalut'],
     requireGuild: false
@@ -18,18 +18,18 @@ const executor: CommandExecutor = (message, client, args) => {
 
         let users = await currentlyBannedUsers()
 
-        if (users) {
-            let now = Date.now()
-            let text = users.reduce((t, c) => {
-                if (!c.currentBan) return t
-
-                return t.concat(`<@!${c.id}> ${c.currentBan?.duration === 'permanent' ? 'permanent' : `temp`}
-             `)
-            }, '')
-            message.channel.send(text)
-        } else {
-            message.channel.send(`Failed to get banned. Are there any ?`)
+        if (!users || users.length === 0) {
+            message.channel.send(`No one is banned.`)
+            return
         }
+
+        let text = users.reduce((t, c) => {
+            if (!c.currentBan) return t
+
+            return t.concat(`<@!${c.id}> ${c.currentBan?.duration === 'permanent' ? 'permanent' : `temp`}
+             `)
+        }, '')
+        message.channel.send(text)
     })
 }
 

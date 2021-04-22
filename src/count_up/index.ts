@@ -1,5 +1,5 @@
 import configuration from '../util/config'
-import fs from 'fs'
+import fs from 'fs/promises'
 import Discord from 'discord.js'
 
 import { ValueReturner } from '../commands/command_files/returnvalue'
@@ -20,13 +20,18 @@ let currentNumber = 0
 let maxUserBufferLength = 2
 let userBuffer: UserBuffer = []
 
-const initializeData = () => {
+const initializeData = async () => {
     let dataLocation = configuration.COUNTING_GAME.DATA_LOCATION
-    if (!fs.existsSync(dataLocation)) {
-        fs.writeFileSync(dataLocation, '{"lastSavedInteger": 0, "highestAchievedInteger": 0}')
+    let file
+    try {
+        file = await fs.open(dataLocation, 'r')
+    } catch {
+        await fs.writeFile(dataLocation, '{"lastSavedInteger": 0, "highestAchievedInteger": 0}')
+    } finally {
+        if (file) file.close()
     }
 
-    cache = JSON.parse(fs.readFileSync(dataLocation, 'utf8'))
+    cache = JSON.parse(await fs.readFile(dataLocation, 'utf8'))
 
     if (cache.lastSavedInteger) {
         currentNumber = cache.lastSavedInteger
@@ -48,17 +53,13 @@ const resetGame = (
     userBuffer = []
 }
 
-const saveValue = (value: number) => {
+const saveValue = async (value: number) => {
     cache.lastSavedInteger = value
     currentNumber = value
     if (!cache.highestAchievedInteger || value > cache.highestAchievedInteger) {
         cache.highestAchievedInteger = value
     }
-    fs.writeFile(configuration.COUNTING_GAME.DATA_LOCATION, JSON.stringify(cache), function (err) {
-        if (err) {
-            return console.info(err)
-        }
-    })
+    await fs.writeFile(configuration.COUNTING_GAME.DATA_LOCATION, JSON.stringify(cache))
 }
 
 const handleMessageEdit = (oldMessage: Discord.Message, newMessage: Discord.Message) => {

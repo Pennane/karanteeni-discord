@@ -1,14 +1,13 @@
 import Command, { CommandExecutor } from '../Command'
 
-import { currentBan } from '../../moderation/index'
-import { parseDuration } from '../../moderation/utils'
+import { clearwarns, unwarn } from '../../moderation/index'
 
 const configuration = {
-    name: 'checkban',
+    name: 'clearwarns',
     admin: true,
-    syntax: 'checban <userId>',
-    desc: 'Bänni ukkeli',
-    triggers: ['checkban', 'check'],
+    syntax: 'clearwarns <userId | @user>',
+    desc: 'Unwarn kaikki ukkeli',
+    triggers: ['clearwarns'],
     type: ['työkalut'],
     requireGuild: false
 }
@@ -16,6 +15,7 @@ const configuration = {
 const executor: CommandExecutor = (message, client, args) => {
     return new Promise(async (resolve, reject) => {
         if (!client) return
+
         if (!args[1]) {
             message.channel.send(configuration.syntax)
             return resolve()
@@ -35,19 +35,14 @@ const executor: CommandExecutor = (message, client, args) => {
             return resolve()
         }
 
-        const ban = await currentBan(targetId)
-        if (ban) {
-            message.channel.send(
-                `<@${targetId}> is banned with reason \`${ban.reason}\`. \n${
-                    ban.duration === 'permanent'
-                        ? `The ban is permanent.`
-                        : `Ban expires \`${new Date(ban.date + (ban.duration as number))}\``
-                }
-              `
-            )
-        } else {
-            message.channel.send(`<@${targetId}> is not banned.`)
+        const afterUnwarn = await clearwarns(targetId)
+
+        if (!afterUnwarn) {
+            message.channel.send('Kyseiseltä käyttäjältä ei voitu poistaa varoituksia, sos')
+            return
         }
+
+        message.channel.send(`Varoitukset  tyhjennetty`)
     })
 }
 

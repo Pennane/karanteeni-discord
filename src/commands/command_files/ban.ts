@@ -44,7 +44,7 @@ const executor: CommandExecutor = (message, client, args) => {
             message.channel.send(
                 `Banned <@${targetId}> with reason \`${newBan.reason}\`. Ban expires \`${new Date(
                     newBan.date + (newBan.duration as number)
-                )}\``
+                ).toLocaleDateString('fi')}\``
             )
         } else {
             message.channel.send(`Failed to ban <@${targetId}>`)
