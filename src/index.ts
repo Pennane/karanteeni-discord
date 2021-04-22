@@ -183,10 +183,6 @@ client.on('guildMemberAdd', async (member) => {
     }
 })
 
-client.on('reconnecting', () => console.info('BOT RECONNECTING'))
-
-client.on('resume', () => console.info('BOT RESUMED SUCCESFULLY'))
-
 client.on('error', (err) => console.info('ERROR ON CLIENT:', err))
 
 client.on('warn', (warn) => console.warn(warn))

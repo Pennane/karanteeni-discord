@@ -6,11 +6,20 @@ export interface Ban {
     reason: string
 }
 
+export interface Warn {
+    date: Milliseconds
+    reason: string
+    id: string
+}
+
 export interface User {
     id: string
     currentBan: Ban | null
-    allTimeBans: Ban[] | []
+    allTimeBans: Ban[]
+    warns: Warn[]
 }
+
+export type EmptyUser = Omit<User, id>
 
 export interface UserData {
     [id: string]: User

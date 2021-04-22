@@ -1,14 +1,16 @@
 import Discord from 'discord.js'
 import fs from 'fs/promises'
-import { Ban, Milliseconds, User, UserData } from './types'
+import uuid from 'uuid'
+import { Ban, EmptyUser, Milliseconds, User, UserData, Warn } from './types'
 import { discordUnban, discordBan, listenForUnban, informUser } from './utils'
 
 const userDataLocation = '../data/banned.json'
 let client: Discord.Client
 
-const emptyUserData = {
+const emptyUserData: EmptyUser = {
     currentBan: null,
-    allTimeBans: []
+    allTimeBans: [],
+    warns: []
 }
 
 const readUserData = async (): Promise<UserData> => {
@@ -21,7 +23,7 @@ const readUserData = async (): Promise<UserData> => {
 }
 
 const writeUserData = async (data: UserData): Promise<void> => {
-    fs.writeFile(userDataLocation, JSON.stringify(data))
+    await fs.writeFile(userDataLocation, JSON.stringify(data))
 }
 
 const fetchUser = async (id: string): Promise<User | null> => {
@@ -40,10 +42,10 @@ const setUser = async (user: User): Promise<User> => {
 const createUser = async (id: string): Promise<User> => {
     const oldUser = await fetchUser(id)
     if (oldUser) throw new Error('Tried to create a new user on top of old one')
-    const data = {
+    const data: User = {
         ...emptyUserData,
         id
-    }
+    } as User
 
     try {
         await setUser(data)
@@ -143,4 +145,49 @@ export const unban = async (id: string): Promise<User | null> => {
 
 export const init = (_client: Discord.Client): void => {
     client = _client
+}
+
+export const warn = async (id: string, reason: string): Promise<Warn> => {
+    let user = await fetchUser(id)
+    if (!user) {
+        user = await createUser(id)
+    }
+
+    const warn = {
+        date: Date.now(),
+        reason,
+        id: uuid.v5('warn', 'karanteeni-moderation')
+    }
+
+    const data = {
+        ...user,
+        warns: [...user.warns, warn]
+    }
+
+    informUser(
+        id,
+        'Sinua on varoitettu karanteenin discordissa.',
+        `Syy: ${reason}\n
+        (Kolmesta varoituksesta tulee automaattinen ban)`
+    )
+    await setUser(data)
+    return warn
+}
+
+export const unwarn = async (id: string, warnId: string): Promise<User | null> => {
+    let user = await fetchUser(id)
+    if (!user) return null
+
+    const data: User = {
+        ...user,
+        warns: user.warns.filter((warn) => warn.id !== warnId)
+    }
+
+    informUser(
+        id,
+        'Varoituksesi on erääntynyt.',
+        `Varoituksesi on erääntynyt tai se on manuaalisesti poistettu karanteenin discordista.`
+    )
+
+    return await setUser(data)
 }
