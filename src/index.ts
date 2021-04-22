@@ -5,16 +5,34 @@ import chalk from 'chalk'
 import configuration from './util/config'
 import { toggleRole } from './util/discordutil'
 import serverStatus from './server_status/status'
-import { handle as handleReaction } from './reaction_handling/index'
 import messageHandler from './message_handling/handler'
 import twitchEmitter from './twitch_integration/twitch'
 import twitchNotifier from './twitch_integration/notify'
 import countingGame from './count_up/index'
 
+import { handle as handleReaction } from './reaction_handling/index'
+import { init as initializeModeration, currentBan } from './moderation/index'
+import { init as initializeSendMessage } from './send_message/index'
+
 let startingDate = Date.now()
 const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION', 'USER'] })
 
 const countingGameChannel = configuration.DISCORD.ID_MAP.CHANNELS.COUNT_UP_GAME
+
+import commandData from './commands/loader'
+import fs from 'fs/promises'
+
+const createCommandMap = async () => {
+    let { commands } = await commandData()
+    let commandMetaMap: {}[] = []
+    commands.forEach((command) => {
+        commandMetaMap.push(command._configuration)
+    })
+
+    await fs.writeFile(__dirname + '/../commandMetaMap.json', JSON.stringify(commandMetaMap))
+}
+
+createCommandMap()
 
 const displayCachedNumberGame = async (): Promise<void> => {
     try {
@@ -62,8 +80,11 @@ client.on(
     async (): Promise<void> => {
         const guild = await client.guilds.fetch(configuration.DISCORD.ID_MAP.GUILD)
 
-        // Update server status
+        initializeModeration(client)
 
+        initializeSendMessage(client)
+
+        // Update server status
         await serverStatus.update(guild)
 
         // Start the counting game
@@ -77,7 +98,7 @@ client.on(
         }
 
         // Update the info channel names in discord every 10 minutes
-        let serverStatusScheduler = schedule.scheduleJob('*/10 * * * *', () => {
+        schedule.scheduleJob('*/10 * * * *', () => {
             serverStatus.update(guild)
         })
 
@@ -167,14 +188,15 @@ client.on('messageReactionRemove', async (reaction, user) => {
     })
 })
 
-client.on('guildMemberAdd', (member) => {
+client.on('guildMemberAdd', async (member) => {
     if (member.user.bot) return
-    toggleRole(member, 'Pelaaja', 'ADD')
+    const banned = await currentBan(member.id)
+    if (!banned) {
+        toggleRole(member, 'Pelaaja', 'ADD')
+    } else {
+        console.log(member.id + ' joined while banned. Did not receive pelaaja role')
+    }
 })
-
-client.on('reconnecting', () => console.info('BOT RECONNECTING'))
-
-client.on('resume', () => console.info('BOT RESUMED SUCCESFULLY'))
 
 client.on('error', (err) => console.info('ERROR ON CLIENT:', err))
 

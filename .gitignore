@@ -2,6 +2,7 @@ authorize.json
 node_modules
 data/countgame.json
 data/test_countgame.json
+data/banned.json
 data/failures.json
 .DS_Store
 .env
