@@ -4,7 +4,8 @@ dotenv.config({ path: `${__dirname}/../../.env` })
 let PREFIX = '/'
 
 let COUNTING_GAME = {
-    DATA_LOCATION: '../data/countgame.json'
+    DATA_LOCATION: '../data/countgame.json',
+    FAILURE_LOCATION: '../data/failures.json'
 }
 
 let DISCORD = {
