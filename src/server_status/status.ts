@@ -43,7 +43,7 @@ function update(guild: Discord.Guild): Promise<void> {
                     .edit({
                         name: 'Pelaajia discordissa: ' + guild.memberCount
                     })
-                    .catch((err: any) => console.info(err))
+                    .catch((err: Error) => console.info(err))
             }
 
             let statusHasPlayercount = serverStatus?.players?.online
@@ -55,14 +55,14 @@ function update(guild: Discord.Guild): Promise<void> {
                     .edit({
                         name: 'Pelaajia servulla: ?'
                     })
-                    .catch((err: any) => console.info(err))
+                    .catch((err: Error) => console.info(err))
             } else if (statusHasPlayercount) {
                 if (!cachedStatusHasPlayercount || serverStatus.players.online !== cachedServerStatus.players.online) {
                     minecraftplayersUpdateChannel
                         .edit({
                             name: 'Pelaajia servulla: ' + serverStatus.players.online
                         })
-                        .catch((err: any) => console.info(err))
+                        .catch((err: Error) => console.info(err))
                 }
             } else if (serverStatus.online === false) {
                 if (!cachedServerStatus || cachedServerStatus.online !== false) {
@@ -70,7 +70,7 @@ function update(guild: Discord.Guild): Promise<void> {
                         .edit({
                             name: 'Palvelin poissa päältä'
                         })
-                        .catch((err: any) => console.info(err))
+                        .catch((err: Error) => console.info(err))
                 }
             }
 

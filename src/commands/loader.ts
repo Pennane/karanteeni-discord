@@ -50,7 +50,7 @@ const loadCommand = async (target: CommandTarget) => {
     }
 }
 
-let commandPromises: Array<Promise<any>> = []
+let commandPromises: Array<Promise<void>> = []
 directory.forEach((file: string) => {
     if (file.endsWith('.js') || file.endsWith('.ts')) {
         commandPromises.push(
@@ -64,7 +64,7 @@ directory.forEach((file: string) => {
 
 const currentlyLoaded = async () => {
     await Promise.allSettled(commandPromises)
-    let _triggers: any = {}
+    let _triggers: { [trigger: string]: string } = {}
     loadedTriggers.forEach((triggers, command) => {
         triggers.forEach((trigger: string) => {
             _triggers[trigger] = command

@@ -4,7 +4,7 @@ import loader from '../commands/loader'
 import { EventEmitter } from 'events'
 import Discord from 'discord.js'
 
-let triggers: any
+let triggers: { [trigger: string]: string }
 let commands: Map<string, Command>
 
 let initialized: boolean = false
