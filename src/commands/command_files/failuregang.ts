@@ -1,6 +1,7 @@
 import Command, { CommandExecutor } from '../Command'
 import config from '../../util/config'
 import fs from 'fs'
+import { arrayToChunks, entries } from '../../util/utilities'
 
 const configuration = {
     name: 'topmokaajat',
@@ -12,14 +13,6 @@ const configuration = {
     requireGuild: false
 }
 
-type Entries<T> = {
-    [K in keyof T]: [K, T[K]]
-}[keyof T][]
-
-function entries<T>(obj: T): Entries<T> {
-    return Object.entries(obj) as any
-}
-
 type UserFails = [id: string, amount: number]
 
 const executor: CommandExecutor = (message, client, args) => {
@@ -28,7 +21,7 @@ const executor: CommandExecutor = (message, client, args) => {
 
         if (!fs.existsSync(failLocation)) return message.channel.send('ei ollenkaan tallennettuja mokia')
 
-        const sortFails = (a: UserFails, b: UserFails) => {
+        const sortFailsFunction = (a: UserFails, b: UserFails) => {
             if (a[1] > b[1]) {
                 return -1
             } else if (a[1] < b[1]) {
@@ -40,11 +33,21 @@ const executor: CommandExecutor = (message, client, args) => {
 
         const embed = Command.createEmbed()
         const failData = entries(JSON.parse(fs.readFileSync(failLocation, 'utf-8')))
-        const sorted = failData.sort(sortFails)
+        const sortedFails = failData.sort(sortFailsFunction)
+        const sortedFailChunks = arrayToChunks(sortedFails, 8)
+
+        const pageCount = sortedFailChunks.length
+        let pageNumber = parseInt(args[1]) || 1
+
+        pageNumber = pageNumber - 1
+
+        if (pageNumber < 0) pageNumber = 0
+        else if (pageNumber > pageCount - 1) pageNumber = pageNumber - 1
 
         embed.setTitle('pahimmat mokaajat, nasty')
+        embed.setFooter(`Sivu ${pageNumber + 1} / ${pageCount}`)
 
-        const promises = sorted.slice(0, 5).map(async (data) => {
+        const promises = sortedFailChunks[pageNumber].map(async (data) => {
             const user = await client.users.fetch(data[0])
             embed.addField(`${user.username || data[0]}:`, `${data[1]} läsähdystä`)
         })
